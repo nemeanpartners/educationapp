@@ -1,0 +1,19 @@
+node_modules/
+build/
+dist/
+coverage/
+.firebase/
+.DS_Store
+*.log
+.env*
+!.env.example
+
+# Local credentials and signing material
+*keys*.docx
+*.cer
+*.p12
+*.provisionprofile
+
+# Generated desktop/mobile wrapper output
+wrappers/**/dist/
+wrappers/**/build/

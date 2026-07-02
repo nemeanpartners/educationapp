@@ -1,0 +1,211 @@
+import { useEffect, useMemo, useState } from 'react';
+import {
+  GoogleAuthProvider,
+  OAuthProvider,
+  browserLocalPersistence,
+  setPersistence,
+  signInWithCredential,
+  signInWithPopup,
+  type UserCredential,
+} from 'firebase/auth';
+import { useNavigate } from 'react-router-dom';
+import { auth, googleProvider, microsoftProvider } from '../firebase';
+import { getStoredStudentPortal, setStoredStudentPortal, studentPortalHome, type StudentPortalType } from '../lib/portal';
+
+type SupportedProvider = 'google' | 'microsoft';
+
+function readPortal(value: string | null): StudentPortalType {
+  return value === 'university' ? 'university' : 'highschool';
+}
+
+function readProvider(value: string | null): SupportedProvider {
+  return value === 'microsoft' ? 'microsoft' : 'google';
+}
+
+function encodePayload(payload: Record<string, string>) {
+  return btoa(JSON.stringify(payload))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/g, '');
+}
+
+function decodePayload(payload: string) {
+  const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+  return JSON.parse(atob(padded)) as Record<string, string>;
+}
+
+function extractDesktopProviderPayload(result: UserCredential, provider: SupportedProvider) {
+  if (provider === 'google') {
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    const accessToken = credential?.accessToken || '';
+    const idToken = credential?.idToken || '';
+    if (!accessToken && !idToken) {
+      throw new Error('Google sign-in completed, but the app did not receive a usable credential.');
+    }
+    return { accessToken, idToken };
+  }
+
+  const credential = OAuthProvider.credentialFromResult(result);
+  const accessToken = credential?.accessToken || '';
+  const idToken = credential?.idToken || '';
+  if (!accessToken && !idToken) {
+    throw new Error('Microsoft sign-in completed, but the app did not receive a usable credential.');
+  }
+  return { accessToken, idToken };
+}
+
+function buildAppReturnUrl(provider: SupportedProvider, portal: StudentPortalType, tokens: { accessToken: string; idToken: string }) {
+  const payload = encodePayload({
+    provider,
+    portal,
+    accessToken: tokens.accessToken || '',
+    idToken: tokens.idToken || '',
+  });
+  return `edurevolutionai://auth-complete?payload=${encodeURIComponent(payload)}`;
+}
+
+export function DesktopBrowserAuthPage() {
+  const [status, setStatus] = useState<'ready' | 'working' | 'returning' | 'error'>('ready');
+  const [message, setMessage] = useState('Choose continue below to sign in with your saved browser account list.');
+
+  const searchParams = useMemo(() => new URLSearchParams(window.location.search), []);
+  const provider = readProvider(searchParams.get('provider'));
+  const portal = readPortal(searchParams.get('portal'));
+
+  useEffect(() => {
+    setStoredStudentPortal(portal);
+  }, [portal, provider]);
+
+  const handleBrowserLogin = async () => {
+    try {
+      setStatus('working');
+      setMessage(provider === 'google' ? 'Opening your Google account chooser…' : 'Opening your Microsoft account chooser…');
+      await setPersistence(auth, browserLocalPersistence);
+      const result = await signInWithPopup(auth, provider === 'google' ? googleProvider : microsoftProvider);
+      const tokens = extractDesktopProviderPayload(result, provider);
+      const returnUrl = buildAppReturnUrl(provider, portal, tokens);
+      setStatus('returning');
+      setMessage('Sign-in complete. Returning you to EduRevolution…');
+      window.location.replace(returnUrl);
+    } catch (error: any) {
+      console.error('Desktop browser auth failed:', error);
+      setStatus('error');
+      setMessage(error?.message || 'Sign-in could not be completed. Please close this page and try again.');
+    }
+  };
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.08),_transparent_32%),linear-gradient(180deg,_#f8fafc_0%,_#f4f7fb_100%)] px-6 py-12 font-sans">
+      <div className="w-full max-w-2xl rounded-[32px] border border-white/80 bg-white/92 p-8 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur">
+        <p className="text-xs font-black uppercase tracking-[0.24em] text-zinc-400">Browser Sign-In</p>
+        <h1 className="mt-4 text-4xl font-black tracking-tight text-zinc-950">
+          {provider === 'google' ? 'Continue with Google' : 'Continue with Microsoft'}
+        </h1>
+        <p className="mt-4 text-lg font-medium leading-8 text-zinc-500">
+          This secure sign-in runs in your default browser so you can use your saved accounts, then returns you to the EduRevolution app automatically.
+        </p>
+
+        <div className="mt-8 rounded-[28px] border border-zinc-200 bg-zinc-50/80 p-6">
+          <p className="text-sm font-black uppercase tracking-[0.18em] text-zinc-400">
+            {status === 'error' ? 'Sign-In Error' : 'Current Step'}
+          </p>
+          <p className="mt-3 text-xl font-bold tracking-tight text-zinc-900">{message}</p>
+          <p className="mt-4 text-sm font-medium leading-7 text-zinc-500">
+            If EduRevolution does not come back to the front automatically, reopen the app after completing sign-in here.
+          </p>
+          <button
+            type="button"
+            onClick={handleBrowserLogin}
+            disabled={status === 'working' || status === 'returning'}
+            className="mt-6 inline-flex items-center justify-center rounded-2xl bg-indigo-600 px-6 py-3 text-sm font-black text-white shadow-lg shadow-indigo-200/70 transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {status === 'working'
+              ? 'Opening…'
+              : provider === 'google'
+                ? 'Continue with Google'
+                : 'Continue with Microsoft'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function DesktopCompleteAuthPage() {
+  const navigate = useNavigate();
+  const [message, setMessage] = useState('Finishing sign-in inside EduRevolution…');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const run = async () => {
+      try {
+        await setPersistence(auth, browserLocalPersistence);
+        const params = new URLSearchParams(window.location.search);
+        const payloadParam = params.get('payload') || '';
+        if (!payloadParam) {
+          throw new Error('The sign-in return payload is missing.');
+        }
+
+        const payload = decodePayload(payloadParam);
+        const provider = readProvider(payload.provider || null);
+        const portal = readPortal(payload.portal || null);
+        const accessToken = String(payload.accessToken || '');
+        const idToken = String(payload.idToken || '');
+
+        let credential;
+        if (provider === 'google') {
+          credential = GoogleAuthProvider.credential(idToken || null, accessToken || null);
+        } else {
+          credential = new OAuthProvider('microsoft.com').credential({
+            idToken: idToken || undefined,
+            accessToken: accessToken || undefined,
+          });
+        }
+
+        if (!credential) {
+          throw new Error('The sign-in credential could not be reconstructed inside the app.');
+        }
+
+        setStoredStudentPortal(portal);
+        await signInWithCredential(auth, credential);
+        setMessage('Signed in. Returning you to your portal…');
+        navigate(studentPortalHome(portal), { replace: true });
+      } catch (error: any) {
+        console.error('Desktop wrapper sign-in completion failed:', error);
+        setErrorMessage(error?.message || 'EduRevolution could not finish the sign-in return.');
+      }
+    };
+
+    run();
+  }, [navigate]);
+
+  if (errorMessage) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.08),_transparent_32%),linear-gradient(180deg,_#f8fafc_0%,_#f4f7fb_100%)] px-6 py-12 font-sans">
+        <div className="w-full max-w-2xl rounded-[32px] border border-white/80 bg-white/92 p-8 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur">
+          <p className="text-xs font-black uppercase tracking-[0.24em] text-rose-400">Return Failed</p>
+          <h1 className="mt-4 text-4xl font-black tracking-tight text-zinc-950">EduRevolution could not finish sign-in</h1>
+          <p className="mt-4 text-lg font-medium leading-8 text-zinc-500">{errorMessage}</p>
+          <button
+            type="button"
+            onClick={() => navigate('/auth', { replace: true })}
+            className="mt-8 inline-flex items-center justify-center rounded-2xl bg-indigo-600 px-6 py-3 text-sm font-black text-white shadow-lg shadow-indigo-200/70 transition hover:bg-indigo-500"
+          >
+            Back to sign in
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.08),_transparent_32%),linear-gradient(180deg,_#f8fafc_0%,_#f4f7fb_100%)] px-6 py-12 font-sans">
+      <div className="w-full max-w-2xl rounded-[32px] border border-white/80 bg-white/92 p-8 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur">
+        <p className="text-xs font-black uppercase tracking-[0.24em] text-zinc-400">Returning To App</p>
+        <h1 className="mt-4 text-4xl font-black tracking-tight text-zinc-950">Finishing your sign-in</h1>
+        <p className="mt-4 text-lg font-medium leading-8 text-zinc-500">{message}</p>
+      </div>
+    </div>
+  );
+}

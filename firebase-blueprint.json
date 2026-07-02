@@ -1,0 +1,376 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Information about the user",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["student", "admin"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "displayName", "role", "createdAt"]
+    },
+    "FlashcardSet": {
+      "title": "Flashcard Set",
+      "description": "A set of study flashcards",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "cards": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "term": { "type": "string" },
+              "definition": { "type": "string" }
+            }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "cards", "createdAt"]
+    },
+    "Quiz": {
+      "title": "Quiz",
+      "description": "A generated quiz for exam prep",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "questions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "question": { "type": "string" },
+              "options": { "type": "array", "items": { "type": "string" } },
+              "correctAnswer": { "type": "string" },
+              "explanation": { "type": "string" }
+            }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "questions", "createdAt"]
+    },
+    "Assignment": {
+      "title": "Assignment",
+      "description": "A student assignment document",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "content", "createdAt"]
+    },
+    "Timetable": {
+      "title": "Timetable",
+      "description": "A weekly class timetable",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "subject": { "type": "string" },
+              "day": { "type": "string" },
+              "startTime": { "type": "string" },
+              "endTime": { "type": "string" },
+              "location": { "type": "string" },
+              "teacher": { "type": "string" },
+              "color": { "type": "string" }
+            }
+          }
+        },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "entries", "updatedAt"]
+    },
+    "PlannerPlan": {
+      "title": "Planner Plan",
+      "description": "A study or activity plan (daily, weekly, etc.)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "type": { "type": "string", "enum": ["day", "week", "term", "semester"] },
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "title": { "type": "string" },
+              "startTime": { "type": "string" },
+              "endTime": { "type": "string" },
+              "day": { "type": "string" },
+              "date": { "type": "string" },
+              "type": { "type": "string", "enum": ["study", "homework", "break", "class", "other"] },
+              "color": { "type": "string" }
+            }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "type", "entries", "createdAt", "updatedAt"]
+    },
+    "TodoTask": {
+      "title": "Todo Task",
+      "description": "A task in the user's to-do list",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "text": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "text", "completed", "createdAt"]
+    },
+    "Deadline": {
+      "title": "Deadline",
+      "description": "An upcoming exam, assignment, or other assessment deadline",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "course": { "type": "string" },
+        "dueDate": { "type": "string", "format": "date-time" },
+        "type": { "type": "string", "enum": ["exam", "assignment", "quiz", "project", "other"] },
+        "priority": { "type": "string", "enum": ["low", "medium", "high"] },
+        "completed": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "course", "dueDate", "type", "priority", "completed", "createdAt"]
+    },
+    "AssignmentPlan": {
+      "title": "AssignmentPlan",
+      "description": "A structured plan for completing an assignment",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "subject": { "type": "string" },
+        "assignmentType": { "type": "string" },
+        "dueDate": { "type": "string", "format": "date-time" },
+        "currentStep": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "integer" },
+              "title": { "type": "string" },
+              "tasks": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "string" },
+                    "text": { "type": "string" },
+                    "completed": { "type": "boolean" }
+                  }
+                }
+              },
+              "completed": { "type": "boolean" }
+            }
+          }
+        },
+        "researchResources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "title": { "type": "string" },
+              "url": { "type": "string" },
+              "takeaways": { "type": "array", "items": { "type": "string" } },
+              "section": { "type": "string", "enum": ["Intro", "Body", "Conclusion", "Other"] }
+            }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "draftContent": { "type": "string" }
+      },
+      "required": ["userId", "title", "subject", "assignmentType", "dueDate", "currentStep", "steps", "createdAt", "updatedAt"]
+    },
+    "ExamPlan": {
+      "title": "ExamPlan",
+      "description": "A structured plan for exam preparation",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "subject": { "type": "string" },
+        "examDate": { "type": "string", "format": "date-time" },
+        "topics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "confidence": { "type": "integer", "minimum": 0, "maximum": 100 },
+              "completed": { "type": "boolean" }
+            }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "subject", "examDate", "topics", "createdAt", "updatedAt"]
+    },
+    "HomeworkPlan": {
+      "title": "Homework Plan",
+      "description": "A personalized academic success plan",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "plan": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "subject": { "type": "string" },
+              "technique": { "type": "string" },
+              "duration": { "type": "string" },
+              "timeOfDay": { "type": "string" },
+              "day": { "type": "string" }
+            }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "plan", "createdAt"]
+    },
+    "BrainSummary": {
+      "title": "Brain Summary",
+      "description": "AI-generated summary of a PDF document",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "fileName": { "type": "string" },
+        "downloadURL": { "type": "string" },
+        "summary": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "fileName", "downloadURL", "summary", "createdAt"]
+    },
+    "Note": {
+      "title": "Note",
+      "description": "A student's personal note",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "content", "createdAt"]
+    },
+    "QCAAQuiz": {
+      "title": "QCAA Quiz",
+      "description": "A 3-level quiz based on QCAA standards or teacher input",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "subject": { "type": "string" },
+        "unit": { "type": "string" },
+        "type": { "type": "string", "enum": ["official", "teacher"] },
+        "teacherNotes": { "type": "string" },
+        "teacherId": { "type": "string" },
+        "data": {
+          "type": "object",
+          "properties": {
+            "level_1": { "type": "array", "items": { "$ref": "QCAAQuestion" } },
+            "level_2": { "type": "array", "items": { "$ref": "QCAAQuestion" } },
+            "level_3": { "type": "array", "items": { "$ref": "QCAAQuestion" } }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "subject", "unit", "type", "data", "createdAt"]
+    },
+    "QCAAQuestion": {
+      "title": "QCAA Question",
+      "type": "object",
+      "properties": {
+        "question": { "type": "string" },
+        "options": { "type": "array", "items": { "type": "string" } },
+        "correct_answer": { "type": "string" },
+        "why_explanation": { "type": "string" }
+      },
+      "required": ["question", "options", "correct_answer", "why_explanation"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile documents"
+    },
+    "/flashcards/{setId}": {
+      "schema": "FlashcardSet",
+      "description": "Study flashcard sets"
+    },
+    "/quizzes/{quizId}": {
+      "schema": "Quiz",
+      "description": "Generated quizzes"
+    },
+    "/qcaa_quizzes/{quizId}": {
+      "schema": "QCAAQuiz",
+      "description": "QCAA standard and teacher-set quizzes"
+    },
+    "/assignments/{assignmentId}": {
+      "schema": "Assignment",
+      "description": "Student assignments"
+    },
+    "/timetables/{userId}": {
+      "schema": "Timetable",
+      "description": "User weekly timetables"
+    },
+    "/planners/{planId}": {
+      "schema": "PlannerPlan",
+      "description": "User study and activity plans"
+    },
+    "/todos/{taskId}": {
+      "schema": "TodoTask",
+      "description": "User to-do list tasks"
+    },
+    "/deadlines/{deadlineId}": {
+      "schema": "Deadline",
+      "description": "User assessment deadlines"
+    },
+    "/assignmentPlans/{planId}": {
+      "schema": "AssignmentPlan",
+      "description": "User assignment planning portals"
+    },
+    "/examPlans/{planId}": {
+      "schema": "ExamPlan",
+      "description": "User exam preparation portals"
+    }
+  }
+}

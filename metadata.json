@@ -1,0 +1,5 @@
+{
+  "name": "EduRevolution AI",
+  "description": "An all-in-one AI-powered education platform featuring role-specific portals for students, teachers, and admins, with QCAA-aligned AI quiz generation and dual-path battle challenges.",
+  "requestFramePermissions": ["camera", "microphone", "geolocation"]
+}

@@ -1,0 +1,739 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Fields: uid (string), email (string), displayName (string), photoURL (string), role (string), createdAt (timestamp)
+    //
+    // Collection: flashcards
+    // Fields: userId (string), title (string), description (string), cards (list), createdAt (timestamp)
+    //
+    // Collection: quizzes
+    // Fields: userId (string), title (string), questions (list), createdAt (timestamp)
+    //
+    // Collection: assignments
+    // Fields: userId (string), title (string), content (string), updatedAt (timestamp), createdAt (timestamp)
+    //
+    // Collection: timetables
+    // Fields: entries (list), updatedAt (string)
+    //
+    // Collection: planners
+    // Fields: userId (string), title (string), type (string), entries (list), createdAt (timestamp), updatedAt (timestamp)
+    //
+    // Collection: todos
+    // Fields: userId (string), text (string), completed (bool), createdAt (timestamp)
+    //
+    // Collection: deadlines
+    // Fields: userId (string), title (string), course (string), dueDate (string), type (string), priority (string), completed (bool), createdAt (timestamp)
+    //
+    // Collection: assignmentPlans
+    // Fields: userId (string), title (string), subject (string), assignmentType (string, optional), dueDate (string), currentStep (int), steps (list), researchResources (list, optional), draftContent (string, optional), createdAt (timestamp), updatedAt (timestamp)
+    //
+    // Collection: examPlans
+    // Fields: userId (string), title (string), subject (string), examDate (string), topics (list), createdAt (timestamp), updatedAt (timestamp)
+    //
+    // Collection: homeworkPlans
+    // Fields: userId (string), plan (list), createdAt (timestamp)
+    //
+    // Collection: calendarNotes
+    // Fields: userId (string), years (map), updatedAt (string)
+    //
+    // Collection: brain_summaries
+    // Fields: userId (string), fileName (string), downloadURL (string), summary (string), createdAt (timestamp)
+    //
+    // Collection: notes
+    // Fields: userId (string), title (string), content (string), createdAt (timestamp)
+    //
+    // Collection: teacherTickets
+    // Fields: userId (string), studentName (string), studentEmail (string), subject (string), message (string), tag (string), teacher (string), classSubject (string), sentAt (string), status (string), replies (list), createdAt (timestamp), updatedAt (timestamp)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && (resource == null || request.auth.uid == resource.data.userId);
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (request.auth.token.email == "rj.kobella@gmail.com" && request.auth.token.email_verified == true);
+    }
+
+    function hasUniversityTeamworkInvite(projectId) {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/universityTeamworkInvites/$(projectId + "_" + request.auth.uid));
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'displayName', 'role', 'createdAt']) &&
+             data.uid is string && data.email is string && data.displayName is string &&
+             data.role in ['student', 'admin'] &&
+             (!('backgrounds' in data) || isValidBackgrounds(data.backgrounds));
+    }
+
+    function isValidBackgrounds(backgrounds) {
+      return backgrounds is map &&
+             backgrounds.keys().hasOnly(['dashboard', 'profile']) &&
+             (!('dashboard' in backgrounds) || isValidBackgroundSetting(backgrounds.dashboard)) &&
+             (!('profile' in backgrounds) || isValidBackgroundSetting(backgrounds.profile));
+    }
+
+    function isValidBackgroundSetting(setting) {
+      return setting is map &&
+             setting.keys().hasOnly(['mode', 'color', 'url', 'presetId', 'overlay']) &&
+             setting.mode in ['default', 'color', 'preset', 'custom'] &&
+             (!('color' in setting) || setting.color is string) &&
+             (!('url' in setting) || isValidUrl(setting.url)) &&
+             (!('presetId' in setting) || setting.presetId is string) &&
+             (!('overlay' in setting) || setting.overlay in ['clear', 'blur']);
+    }
+
+    function isValidUrl(url) {
+      return url is string &&
+             url.size() <= 4096 &&
+             (url.matches('https://.*') || url.matches('/background-presets/.*'));
+    }
+
+    function isValidFlashcardSet(data) {
+      return data.keys().hasAll(['userId', 'title', 'cards', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 100 &&
+             data.cards is list && data.cards.size() <= 100;
+    }
+
+    function isValidQuiz(data) {
+      return data.keys().hasAll(['userId', 'title', 'questions', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             data.title is string && data.title.size() > 0 &&
+             data.questions is list && data.questions.size() <= 50;
+    }
+
+    function isValidAssignment(data) {
+      return data.keys().hasAll(['userId', 'title', 'content', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             data.title is string && data.title.size() > 0 &&
+             data.content is string && data.content.size() < 100000;
+    }
+
+
+    function isValidTimetable(data) {
+      return data.keys().hasAll(['userId', 'entries', 'updatedAt']) &&
+             data.userId == request.auth.uid &&
+             data.entries is list && data.entries.size() <= 100;
+    }
+
+    function isValidPlannerPlan(data) {
+      return data.keys().hasAll(['userId', 'title', 'type', 'entries', 'createdAt', 'updatedAt']) &&
+             data.userId == request.auth.uid &&
+             data.title is string && data.title.size() > 0 &&
+             data.type in ['day', 'week', 'term', 'semester'] &&
+             data.entries is list && data.entries.size() <= 200;
+    }
+
+    function isValidTodoTask(data) {
+      return data.keys().hasAll(['userId', 'text', 'completed', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             data.text is string && data.text.size() > 0 && data.text.size() < 1000 &&
+             data.completed is bool;
+    }
+
+    function isValidDeadline(data) {
+      return data.keys().hasAll(['userId', 'title', 'course', 'dueDate', 'type', 'priority', 'completed', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.course is string && data.course.size() > 0 &&
+             data.type in ['exam', 'assignment', 'quiz', 'project', 'reading', 'other'] &&
+             data.priority in ['low', 'medium', 'high'] &&
+             data.completed is bool;
+    }
+
+    function isValidAssignmentPlan(data) {
+      return data.keys().hasAll(['userId', 'title', 'subject', 'dueDate', 'currentStep', 'steps', 'createdAt', 'updatedAt']) &&
+             data.userId == request.auth.uid &&
+             data.title is string && data.title.size() > 0 &&
+             data.subject is string && data.subject.size() > 0 &&
+             data.dueDate is string &&
+             data.currentStep >= 1 && data.currentStep <= 5 &&
+             data.steps is list &&
+             (!('assignmentType' in data) || data.assignmentType is string) &&
+             (!('researchResources' in data) || data.researchResources is list) &&
+             (!('draftContent' in data) || data.draftContent is string);
+    }
+
+    function isValidExamPlan(data) {
+      return data.keys().hasAll(['userId', 'title', 'subject', 'examDate', 'topics', 'createdAt', 'updatedAt']) &&
+             data.userId == request.auth.uid &&
+             data.title is string && data.title.size() > 0 &&
+             data.subject is string && data.subject.size() > 0 &&
+             data.examDate is string &&
+             data.topics is list;
+    }
+
+    function isValidHomeworkPlan(data) {
+      return data.keys().hasAll(['userId', 'plan', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             data.plan is list && data.plan.size() <= 100;
+    }
+
+    function isValidStudyPlanningProfile(data) {
+      return data.keys().hasAll(['userId', 'courses', 'gradeGoals', 'availability', 'commitments', 'createdAt', 'updatedAt']) &&
+             data.userId == request.auth.uid &&
+             data.courses is list &&
+             data.gradeGoals is list &&
+             data.availability is list &&
+             data.commitments is list &&
+             data.createdAt is string &&
+             data.updatedAt is string;
+    }
+
+    function isValidCalendarNotes(data) {
+      return data.keys().hasAll(['userId', 'years', 'updatedAt']) &&
+             data.userId == request.auth.uid &&
+             data.years is map &&
+             data.updatedAt is string;
+    }
+
+    function isValidBrainSummary(data) {
+      return data.keys().hasAll(['userId', 'fileName', 'downloadURL', 'summary', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             data.fileName is string && data.fileName.size() > 0 &&
+             data.downloadURL is string && isValidUrl(data.downloadURL) &&
+             data.summary is string && data.summary.size() > 0;
+    }
+
+    function isValidNote(data) {
+      return data.keys().hasAll(['userId', 'title', 'text', 'createdAt']) &&
+             (!('updatedAt' in data) || data.updatedAt != null) &&
+             data.userId == request.auth.uid &&
+             data.title is string && data.title.size() > 0 &&
+             data.text is string;
+    }
+
+    function isValidTeacherTicket(data) {
+      return data.keys().hasAll(['userId', 'studentName', 'studentEmail', 'subject', 'message', 'tag', 'teacher', 'classSubject', 'sentAt', 'status', 'replies', 'createdAt', 'updatedAt']) &&
+             data.userId == request.auth.uid &&
+             data.studentName is string &&
+             data.studentEmail is string &&
+             data.subject is string && data.subject.size() > 0 && data.subject.size() < 200 &&
+             data.message is string && data.message.size() > 0 && data.message.size() < 5000 &&
+             data.tag is string &&
+             data.teacher is string &&
+             data.classSubject is string &&
+             data.sentAt is string &&
+             data.status in ['open', 'replied', 'closed'] &&
+             data.replies is list;
+    }
+
+    function isValidTeacherProfile(data) {
+      return data.keys().hasAll(['teacherId', 'teacherName', 'teacherEmail', 'classes', 'updatedAt']) &&
+             data.teacherId == request.auth.uid &&
+             data.teacherName is string &&
+             data.teacherName.size() > 0 &&
+             data.teacherName.size() < 120 &&
+             data.teacherEmail is string &&
+             data.classes is list &&
+             data.classes.size() <= 80;
+    }
+
+    function isValidMoodLogs(data) {
+      // Base counters are always required. Extra fields are allowed (e.g. dailyCounts).
+      return data.keys().hasAll(['Hap', 'Cal', 'Neu', 'Anx', 'Sad', 'Ang']) &&
+             data.Hap is number && data.Cal is number && data.Neu is number &&
+             data.Anx is number && data.Sad is number && data.Ang is number &&
+             data.Hap >= 0 && data.Cal >= 0 && data.Neu >= 0 &&
+             data.Anx >= 0 && data.Sad >= 0 && data.Ang >= 0 &&
+             (!('dailyCounts' in data) || data.dailyCounts is map) &&
+             (!('dailyLastAt' in data) || data.dailyLastAt is map) &&
+             (!('lastLoggedAt' in data) || data.lastLoggedAt != null) &&
+             (!('updatedAt' in data) || data.updatedAt != null);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) || isAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) || isAdmin()) && request.resource.data.role == resource.data.role;
+    }
+
+    match /usernameIndexes/{usernameLower} {
+      allow read: if true;
+      allow create, update: if isAuthenticated() &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.email is string &&
+        request.resource.data.username is string &&
+        request.resource.data.usernameLower == usernameLower;
+    }
+
+    match /flashcards/{setId} {
+      allow read: if isAuthenticated() && (resource != null && resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAuthenticated() && (request.resource != null && request.resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /quizzes/{quizId} {
+      allow read: if isAuthenticated() && (resource != null && resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAuthenticated() && (request.resource != null && request.resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /assignments/{assignmentId} {
+      allow read: if isAuthenticated() && (resource != null && resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAuthenticated() && (request.resource != null && request.resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /assignments/{assignmentId}/pages/{pageId} {
+      allow read: if isAuthenticated() && (get(/databases/$(database)/documents/assignments/$(assignmentId)).data.userId == request.auth.uid || isAdmin());
+      allow write: if isAuthenticated() && (request.resource != null && request.resource.data.userId == request.auth.uid || isAdmin());
+    }
+    match /assignments/{assignmentId}/pages/{pageId} {
+      allow read, write: if isAuthenticated() && (
+        isAdmin() ||
+        get(/databases/$(database)/documents/assignments/$(assignmentId)).data.userId == request.auth.uid
+      );
+    }
+
+
+    match /timetables/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isOwner(userId) && isValidTimetable(request.resource.data);
+    }
+
+    match /planners/{planId} {
+      allow read: if isAuthenticated() && (
+        planId == request.auth.uid + "_day" || 
+        planId == request.auth.uid + "_week" || 
+        planId == request.auth.uid + "_term" || 
+        planId == request.auth.uid + "_semester" || 
+        isAdmin()
+      );
+      allow write: if isAuthenticated() && (
+        planId == request.auth.uid + "_day" || 
+        planId == request.auth.uid + "_week" || 
+        planId == request.auth.uid + "_term" || 
+        planId == request.auth.uid + "_semester" || 
+        isAdmin()
+      ) && isValidPlannerPlan(request.resource.data);
+    }
+
+    match /todos/{taskId} {
+      allow read: if isAuthenticated() && (resource != null && resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAuthenticated() && (request.resource != null && request.resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /deadlines/{deadlineId} {
+      allow read: if isAuthenticated() && (resource != null && resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAuthenticated() && (request.resource != null && request.resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /assignmentPlans/{planId} {
+      allow read: if isAuthenticated() && (resource != null && resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAuthenticated() && (request.resource != null && request.resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /examPlans/{planId} {
+      allow read: if isAuthenticated() && (resource != null && resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAuthenticated() && (request.resource != null && request.resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /mood_logs/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isOwner(userId) && isValidMoodLogs(request.resource.data);
+    }
+
+    match /brain_summaries/{summaryId} {
+      allow read: if isAuthenticated() && (resource != null && resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAuthenticated() && (request.resource != null && request.resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /pdf_summaries/{summaryId} {
+      allow read: if isAuthenticated() && (resource != null && resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAuthenticated() && (request.resource != null && request.resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /notes/{noteId} {
+      allow read, write: if isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /teacherTickets/{ticketId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidTeacherTicket(request.resource.data);
+      allow update: if isAuthenticated() &&
+        request.resource.data.diff(resource.data).changedKeys().hasOnly(['status', 'replies', 'updatedAt']) &&
+        request.resource.data.status in ['open', 'replied', 'closed'] &&
+        request.resource.data.replies is list;
+    }
+
+    match /teacherProfiles/{teacherId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() &&
+        teacherId == request.auth.uid &&
+        isValidTeacherProfile(request.resource.data);
+      allow delete: if isAuthenticated() && teacherId == request.auth.uid;
+    }
+
+    match /formulaExplanations/{explanationId} {
+      allow read: if isAuthenticated() && (resource != null && resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAuthenticated() && (request.resource != null && request.resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /assistantConversations/{conversationId} {
+      allow read: if isAuthenticated() && (resource != null && resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAuthenticated() && (request.resource != null && request.resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /microsoftConnections/{userId} {
+      allow read, write: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        (resource != null && resource.data.userId == request.auth.uid) ||
+        (request.resource != null && request.resource.data.userId == request.auth.uid) ||
+        isAdmin()
+      );
+    }
+
+    match /qcaa_quizzes/{quizId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /homeworkPlans/{planId} {
+      allow read, write: if isAuthenticated() && (request.auth.uid == planId || isAdmin());
+    }
+
+    match /studyPlanningProfiles/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if (isOwner(userId) && isValidStudyPlanningProfile(request.resource.data)) || isAdmin();
+    }
+
+    match /calendarNotes/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isOwner(userId) && isValidCalendarNotes(request.resource.data);
+    }
+
+    match /flashcardSets/{setId} {
+      allow read: if isAuthenticated() && (resource != null && resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAuthenticated() && (request.resource != null && request.resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /classNotesNotebooks/{id} {
+      allow read, write: if isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /classNotesSections/{id} {
+      allow read, write: if isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /classNotesPages/{id} {
+      allow read, write: if isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /focusSessions/{id} {
+      allow read, write: if isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /focusStreaks/{id} {
+      allow read, write: if isAuthenticated() && (request.auth.uid == id || isAdmin());
+    }
+
+    match /universityUsers/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) || isAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) || isAdmin()) && request.resource.data.role == resource.data.role;
+    }
+
+    match /universityUsernameIndexes/{usernameLower} {
+      allow read: if true;
+      allow create, update: if isAuthenticated() &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.email is string &&
+        request.resource.data.username is string &&
+        request.resource.data.usernameLower == usernameLower;
+    }
+
+    match /universityUserDirectory/{userId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() &&
+        isOwner(userId) &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.emailLower is string &&
+        request.resource.data.displayName is string;
+    }
+
+    match /userDirectory/{userId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() &&
+        isOwner(userId) &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.emailLower is string &&
+        request.resource.data.displayName is string;
+    }
+
+    match /universityFlashcards/{setId} {
+      allow read: if isAuthenticated() && (resource != null && resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAuthenticated() && (request.resource != null && request.resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /universityQuizzes/{quizId} {
+      allow read: if isAuthenticated() && (resource != null && resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAuthenticated() && (request.resource != null && request.resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /universityAssignments/{assignmentId} {
+      allow read: if isAuthenticated() && (resource != null && resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAuthenticated() && (request.resource != null && request.resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /universityAssignments/{assignmentId}/pages/{pageId} {
+      allow read, write: if isAuthenticated() && (
+        isAdmin() ||
+        get(/databases/$(database)/documents/universityAssignments/$(assignmentId)).data.userId == request.auth.uid
+      );
+    }
+
+    match /universityTimetables/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isOwner(userId) && isValidTimetable(request.resource.data);
+    }
+
+    match /universityPlanners/{planId} {
+      allow read: if isAuthenticated() && (
+        planId == request.auth.uid + "_day" ||
+        planId == request.auth.uid + "_week" ||
+        planId == request.auth.uid + "_term" ||
+        planId == request.auth.uid + "_semester" ||
+        isAdmin()
+      );
+      allow write: if isAuthenticated() && (
+        planId == request.auth.uid + "_day" ||
+        planId == request.auth.uid + "_week" ||
+        planId == request.auth.uid + "_term" ||
+        planId == request.auth.uid + "_semester" ||
+        isAdmin()
+      ) && isValidPlannerPlan(request.resource.data);
+    }
+
+    match /universityTodos/{taskId} {
+      allow read: if isAuthenticated() && (resource != null && resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAuthenticated() && (request.resource != null && request.resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /universityDeadlines/{deadlineId} {
+      allow read: if isAuthenticated() && (resource != null && resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAuthenticated() && (request.resource != null && request.resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /universityAssignmentPlans/{planId} {
+      allow read: if isAuthenticated() && (resource != null && resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAuthenticated() && (request.resource != null && request.resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /universityExamPlans/{planId} {
+      allow read: if isAuthenticated() && (resource != null && resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAuthenticated() && (request.resource != null && request.resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /universityMood_logs/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isOwner(userId) && isValidMoodLogs(request.resource.data);
+    }
+
+    match /universityBrain_summaries/{summaryId} {
+      allow read: if isAuthenticated() && (resource != null && resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAuthenticated() && (request.resource != null && request.resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /universityPdf_summaries/{summaryId} {
+      allow read: if isAuthenticated() && (resource != null && resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAuthenticated() && (request.resource != null && request.resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /universityNotes/{noteId} {
+      allow read, write: if isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /universityTeacherTickets/{ticketId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidTeacherTicket(request.resource.data);
+      allow update: if isAuthenticated() &&
+        request.resource.data.diff(resource.data).changedKeys().hasOnly(['status', 'replies', 'updatedAt']) &&
+        request.resource.data.status in ['open', 'replied', 'closed'] &&
+        request.resource.data.replies is list;
+    }
+
+    match /universityTeacherProfiles/{teacherId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() &&
+        teacherId == request.auth.uid &&
+        isValidTeacherProfile(request.resource.data);
+      allow delete: if isAuthenticated() && teacherId == request.auth.uid;
+    }
+
+    match /universityFormulaExplanations/{explanationId} {
+      allow read: if isAuthenticated() && (resource != null && resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAuthenticated() && (request.resource != null && request.resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /universityAssistantConversations/{conversationId} {
+      allow read: if isAuthenticated() && (resource != null && resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAuthenticated() && (request.resource != null && request.resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /universityQcaa_quizzes/{quizId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /universityHomeworkPlans/{planId} {
+      allow read, write: if isAuthenticated() && (request.auth.uid == planId || isAdmin());
+    }
+
+    match /universityStudyPlanningProfiles/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if (isOwner(userId) && isValidStudyPlanningProfile(request.resource.data)) || isAdmin();
+    }
+
+    match /universityCalendarNotes/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isOwner(userId) && isValidCalendarNotes(request.resource.data);
+    }
+
+    match /universityFlashcardSets/{setId} {
+      allow read: if isAuthenticated() && (resource != null && resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAuthenticated() && (request.resource != null && request.resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /universityClassNotesNotebooks/{id} {
+      allow read, write: if isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /universityClassNotesSections/{id} {
+      allow read, write: if isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /universityClassNotesPages/{id} {
+      allow read, write: if isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /universityFocusSessions/{id} {
+      allow read, write: if isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /universityFocusStreaks/{id} {
+      allow read, write: if isAuthenticated() && (request.auth.uid == id || isAdmin());
+    }
+
+    match /universityTeamworkProjects/{id} {
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid;
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        resource.data.userId == request.auth.uid ||
+        (('memberUserIds' in resource.data) && request.auth.uid in resource.data.memberUserIds) ||
+        hasUniversityTeamworkInvite(id)
+      );
+      allow update: if isAuthenticated() && (
+        isAdmin() ||
+        resource.data.userId == request.auth.uid ||
+        (('memberUserIds' in resource.data) && request.auth.uid in resource.data.memberUserIds) ||
+        (
+          hasUniversityTeamworkInvite(id) &&
+          request.auth.uid in request.resource.data.memberUserIds &&
+          request.resource.data.diff(resource.data).changedKeys().hasOnly(['memberUserIds', 'memberProfiles', 'members', 'updatedAt'])
+        )
+      ) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isAuthenticated() && (
+        isAdmin() ||
+        resource.data.userId == request.auth.uid
+      );
+
+      match /messages/{messageId} {
+        allow read: if isAuthenticated() && (
+          isAdmin() ||
+          get(/databases/$(database)/documents/universityTeamworkProjects/$(id)).data.userId == request.auth.uid ||
+          request.auth.uid in get(/databases/$(database)/documents/universityTeamworkProjects/$(id)).data.memberUserIds
+        );
+        allow create: if isAuthenticated() &&
+          request.resource.data.authorId == request.auth.uid &&
+          (
+            get(/databases/$(database)/documents/universityTeamworkProjects/$(id)).data.userId == request.auth.uid ||
+            request.auth.uid in get(/databases/$(database)/documents/universityTeamworkProjects/$(id)).data.memberUserIds
+          );
+        allow delete: if isAuthenticated() && (
+          isAdmin() ||
+          resource.data.authorId == request.auth.uid ||
+          get(/databases/$(database)/documents/universityTeamworkProjects/$(id)).data.userId == request.auth.uid
+        );
+      }
+    }
+
+    match /universityTeamworkInvites/{id} {
+      allow create: if isAuthenticated() &&
+        request.resource.data.fromUserId == request.auth.uid &&
+        request.resource.data.status == 'pending' &&
+        id == request.resource.data.projectId + "_" + request.resource.data.toUserId;
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        resource.data.fromUserId == request.auth.uid ||
+        resource.data.toUserId == request.auth.uid
+      );
+      allow update: if isAuthenticated() && (
+        isAdmin() ||
+        resource.data.fromUserId == request.auth.uid ||
+        resource.data.toUserId == request.auth.uid
+      ) && request.resource.data.fromUserId == resource.data.fromUserId &&
+        request.resource.data.toUserId == resource.data.toUserId;
+      allow delete: if isAuthenticated() && (
+        isAdmin() ||
+        resource.data.fromUserId == request.auth.uid ||
+        resource.data.toUserId == request.auth.uid
+      );
+    }
+
+    match /universityResearchDeskProjects/{id} {
+      allow read, write: if isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /universityAiCaches/{id} {
+      allow read, write: if isAuthenticated() && (
+        isAdmin() ||
+        id == request.auth.uid ||
+        id.matches(request.auth.uid + "_.*")
+      );
+    }
+
+    match /universityMathSolverOutputs/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    match /universityUserMathSolverOutputs/{id} {
+      allow read, write: if isAuthenticated() && (
+        isAdmin() ||
+        id == request.auth.uid ||
+        id.matches(request.auth.uid + "_.*")
+      );
+    }
+
+    match /universityDeletedUsers/{userId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+    }
+
+    // Default deny
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}

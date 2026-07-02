@@ -1,0 +1,57 @@
+{
+  "name": "edurevolution-macos-shell",
+  "version": "1.0.0",
+  "private": true,
+  "description": "macOS wrapper for EduRev",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --mac dmg",
+    "dist:dmg": "electron-builder --mac dmg",
+    "dist:mas": "electron-builder --mac mas --universal",
+    "dist:all": "electron-builder --mac dmg mas --universal"
+  },
+  "build": {
+    "appId": "ai.edurevolution.wrapper.ios",
+    "productName": "EduRev",
+    "protocols": [
+      {
+        "name": "EduRev",
+        "schemes": [
+          "edurevolutionai"
+        ]
+      }
+    ],
+    "files": [
+      "main.js",
+      "preload.js",
+      "package.json",
+      "build/icon-1024.png"
+    ],
+    "mac": {
+      "category": "public.app-category.education",
+      "icon": "build/icon.icns",
+      "target": [
+        "dmg",
+        "mas"
+      ],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
+    },
+    "dmg": {
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "mas": {
+      "type": "distribution",
+      "entitlements": "build/entitlements.mas.plist",
+      "entitlementsInherit": "build/entitlements.mas.inherit.plist",
+      "provisioningProfile": "build/EduRev.provisionprofile"
+    }
+  },
+  "devDependencies": {
+    "electron": "^37.2.0",
+    "electron-builder": "^26.0.12"
+  }
+}

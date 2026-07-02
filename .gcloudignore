@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env
+.env.*
+.DS_Store
+npm-debug.log
+*.local
+wrappers/
+Screenshot *.jpeg
+Screenshot *.jpg
+Screenshot *.png
+*.mp4
