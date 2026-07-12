@@ -60,6 +60,31 @@ app.use((_req, res, next) => {
 app.use(express.json({ limit: "25mb" }));
 app.use(express.static(distPath));
 
+const firebaseAuthHelperOrigin =
+  process.env.FIREBASE_AUTH_HELPER_ORIGIN ||
+  "https://educationapp26.web.app";
+
+app.get("/__/auth/*", async (req, res) => {
+  try {
+    const upstreamUrl = new URL(req.originalUrl, firebaseAuthHelperOrigin);
+    const upstream = await fetch(upstreamUrl, {
+      headers: {
+        "User-Agent": req.get("user-agent") || "EduRevAuthProxy/1.0",
+      },
+    });
+    const contentType = upstream.headers.get("content-type");
+    const cacheControl = upstream.headers.get("cache-control");
+
+    if (contentType) res.setHeader("Content-Type", contentType);
+    if (cacheControl) res.setHeader("Cache-Control", cacheControl);
+
+    res.status(upstream.status).send(Buffer.from(await upstream.arrayBuffer()));
+  } catch (error) {
+    console.error("Firebase auth helper proxy failed:", error);
+    res.status(502).send("Firebase auth helper unavailable.");
+  }
+});
+
 function decodeXmlEntities(value: string) {
   return value
     .replace(/&amp;/g, "&")

@@ -13,6 +13,15 @@
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "run": {
+          "serviceId": "edurevolution-ai",
+          "region": "us-west1"
+        }
+      }
     ]
   }
 }
