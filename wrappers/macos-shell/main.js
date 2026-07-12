@@ -13,6 +13,7 @@ let officeWindow = null;
 let embeddedWordView = null;
 let embeddedGoogleView = null;
 let pendingDeepLink = null;
+let wordSessionNonce = Date.now();
 
 app.commandLine.appendSwitch("disable-http-cache");
 
@@ -116,9 +117,11 @@ function ensureEmbeddedWordView() {
     return embeddedWordView;
   }
 
+  wordSessionNonce += 1;
   embeddedWordView = new BrowserView({
     webPreferences: {
       contextIsolation: true,
+      partition: `temporary:edurev-word-${wordSessionNonce}`,
       sandbox: true,
     },
   });
@@ -178,7 +181,14 @@ function attachEmbeddedWordView(bounds) {
 function openEmbeddedWordView(targetUrl, bounds) {
   const view = attachEmbeddedWordView(bounds);
   if (!view) return;
-  view.webContents.loadURL(targetUrl);
+  Promise.allSettled([
+    view.webContents.session.clearCache(),
+    view.webContents.session.clearStorageData(),
+  ]).finally(() => {
+    if (!view.webContents.isDestroyed()) {
+      view.webContents.loadURL(targetUrl);
+    }
+  });
 }
 
 function updateEmbeddedWordBounds(bounds) {
@@ -274,6 +284,7 @@ function createOfficeWindow(targetUrl) {
     parent: mainWindow || undefined,
     webPreferences: {
       contextIsolation: true,
+      partition: `temporary:edurev-office-${Date.now()}`,
       sandbox: true,
     },
   });

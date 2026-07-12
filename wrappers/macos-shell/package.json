@@ -14,6 +14,7 @@
   "build": {
     "appId": "ai.edurevolution.wrapper.ios",
     "productName": "EduRev",
+    "buildVersion": "1.0.1",
     "protocols": [
       {
         "name": "EduRev",
@@ -37,16 +38,16 @@
       ],
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
-      "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.plist"
+      "entitlements": "config/entitlements.mac.plist",
+      "entitlementsInherit": "config/entitlements.mac.plist"
     },
     "dmg": {
       "artifactName": "${productName}-${version}-${arch}.${ext}"
     },
     "mas": {
       "type": "distribution",
-      "entitlements": "build/entitlements.mas.plist",
-      "entitlementsInherit": "build/entitlements.mas.inherit.plist",
+      "entitlements": "config/entitlements.mas.plist",
+      "entitlementsInherit": "config/entitlements.mas.inherit.plist",
       "provisioningProfile": "build/EduRev.provisionprofile"
     }
   },
