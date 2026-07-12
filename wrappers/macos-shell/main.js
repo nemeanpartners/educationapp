@@ -3,7 +3,7 @@ const { app, BrowserWindow, shell, ipcMain, BrowserView } = require("electron");
 
 const APP_ORIGIN = "https://edurevolution-ai-wyxvlktr5q-uw.a.run.app";
 const APP_URL = `${APP_ORIGIN}/auth?shell=macos`;
-const FIREBASE_AUTH_ORIGIN = "https://studio-7677496479-873b4.firebaseapp.com";
+const FIREBASE_AUTH_ORIGIN = "https://www.educationrevolution.qld.one";
 const CUSTOM_PROTOCOL = "edurevolutionai";
 const APP_NAME = "EduRev";
 const DOCK_ICON = path.join(__dirname, "build", "icon-1024.png");
@@ -85,6 +85,7 @@ function isAllowedAuthPopupUrl(url) {
       host.endsWith(".login.microsoftonline.com") ||
       host === "login.live.com" ||
       host.endsWith(".live.com") ||
+      host === "www.educationrevolution.qld.one" ||
       host === "studio-7677496479-873b4.firebaseapp.com" ||
       host.endsWith(".firebaseapp.com") ||
       host === "edurevolution-ai-wyxvlktr5q-uw.a.run.app"
