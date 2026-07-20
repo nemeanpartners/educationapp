@@ -1,8 +1,8 @@
 {
-  "name": "edurevolution-macos-shell",
+  "name": "educationrev",
   "version": "1.0.0",
   "private": true,
-  "description": "macOS wrapper for EduRev",
+  "description": "macOS wrapper for Education Revolution",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -13,11 +13,11 @@
   },
   "build": {
     "appId": "ai.edurevolution.wrapper.ios",
-    "productName": "EduRev",
-    "buildVersion": "1.0.1",
+    "productName": "EducationRev",
+    "buildVersion": "1.0.3",
     "protocols": [
       {
-        "name": "EduRev",
+        "name": "EducationRev",
         "schemes": [
           "edurevolutionai"
         ]
@@ -46,8 +46,10 @@
     },
     "mas": {
       "type": "distribution",
+      "hardenedRuntime": false,
       "entitlements": "config/entitlements.mas.plist",
       "entitlementsInherit": "config/entitlements.mas.inherit.plist",
+      "preAutoEntitlements": false,
       "provisioningProfile": "build/EduRev.provisionprofile"
     }
   },

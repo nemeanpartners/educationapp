@@ -1457,6 +1457,62 @@ function sendIndex(res: express.Response) {
   res.type("html").send(html);
 }
 
+app.get("/support", (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.type("html").send(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EducationRev Support</title>
+  <style>
+    :root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #111827; background: #f8fbff; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 32px; background: linear-gradient(180deg, #f8fbff 0%, #eef5fb 100%); }
+    main { width: min(760px, 100%); border: 1px solid rgba(148, 163, 184, 0.35); border-radius: 18px; background: rgba(255, 255, 255, 0.94); box-shadow: 0 24px 80px rgba(15, 23, 42, 0.10); padding: clamp(28px, 5vw, 48px); }
+    h1 { margin: 0; font-size: clamp(2rem, 5vw, 3.25rem); line-height: 1; letter-spacing: 0; }
+    h2 { margin: 30px 0 10px; font-size: 1.1rem; }
+    p, li { color: #4b5563; font-size: 1rem; line-height: 1.65; font-weight: 600; }
+    a { color: #4f46e5; font-weight: 800; }
+    .card { margin-top: 22px; border-radius: 14px; background: #f9fafb; border: 1px solid #e5e7eb; padding: 18px; }
+    .actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
+    .button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; border-radius: 12px; background: #4f46e5; color: white; padding: 0 16px; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>EducationRev Support</h1>
+    <p>EducationRev is an education workspace for high school and university students. This page provides support information for users who need help with account access, sign-in, app behaviour, or data questions.</p>
+
+    <section class="card">
+      <h2>Contact support</h2>
+      <p>Email: <a href="mailto:christinalucas1216@gmail.com?subject=EducationRev%20Support">christinalucas1216@gmail.com</a></p>
+      <p>Include your device type, macOS version, the sign-in method you used, and a short description of the issue.</p>
+      <div class="actions">
+        <a class="button" href="mailto:christinalucas1216@gmail.com?subject=EducationRev%20Support">Email Support</a>
+        <a href="/auth">Return to EducationRev</a>
+      </div>
+    </section>
+
+    <section>
+      <h2>Common support topics</h2>
+      <ul>
+        <li>Google, Microsoft, email, or guest sign-in support.</li>
+        <li>High school and university portal access.</li>
+        <li>Questions about assignments, notes, planning, study tools, and saved workspace data.</li>
+        <li>Requests about account deletion or privacy.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Policies</h2>
+      <p><a href="/privacy">Privacy Policy</a> and <a href="/terms">Terms of Service</a></p>
+    </section>
+  </main>
+</body>
+</html>`);
+});
+
 // Root route
 app.get("/", (_req, res) => {
   sendIndex(res);

@@ -20,4 +20,10 @@ contextBridge.exposeInMainWorld("eduRevShell", {
   closeGooglePage() {
     ipcRenderer.send("google-page:close");
   },
+  reloadApp() {
+    ipcRenderer.send("app:reload");
+  },
+  openAppInBrowser() {
+    ipcRenderer.send("app:open-browser");
+  },
 });

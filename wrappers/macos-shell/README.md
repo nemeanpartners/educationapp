@@ -1,6 +1,6 @@
-# EduRevolution macOS Wrapper
+# Education Revolution macOS Wrapper
 
-This wrapper packages the live EduRevolution web app as a macOS desktop shell.
+This wrapper packages the live Education Revolution web app as a macOS desktop shell.
 
 ## Build targets
 
