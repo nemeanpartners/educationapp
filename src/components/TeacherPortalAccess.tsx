@@ -106,7 +106,7 @@ function TeacherLoginPanel() {
               <GraduationCap size={26} />
             </div>
             <div>
-              <p className="text-sm font-black uppercase tracking-[0.24em] text-purple-200">EduRev AI</p>
+              <p className="text-sm font-black uppercase tracking-[0.24em] text-purple-200">EducationRev</p>
               <h1 className="text-3xl font-black tracking-tight">Teacher Portal</h1>
             </div>
           </div>
@@ -672,7 +672,7 @@ function TeacherTicketPortal({ user }: { user: User }) {
             <GraduationCap size={24} />
           </div>
           <div>
-            <p className="text-lg font-black tracking-tight">EduRev AI</p>
+            <p className="text-lg font-black tracking-tight">EducationRev</p>
             <p className="text-[11px] font-black uppercase tracking-[0.16em] text-purple-600">Teacher Portal</p>
           </div>
         </div>

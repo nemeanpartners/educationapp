@@ -317,10 +317,10 @@ export default function Layout({ user, profile, portal = 'highschool' }: LayoutP
       <aside className="hidden h-dvh min-h-dvh w-72 shrink-0 flex-col overflow-hidden border-r border-zinc-200 bg-white lg:flex">
         <div className="flex h-20 items-center gap-3 px-8 shrink-0">
           <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl bg-transparent">
-            <img src={appLogo} alt="EduRev AI logo" className="h-full w-full object-contain" />
+            <img src={appLogo} alt="EducationRev logo" className="h-full w-full object-contain" />
           </div>
           <div className="min-w-0">
-            <span className="block text-xl font-black tracking-tight text-zinc-900">EduRev AI</span>
+            <span className="block text-xl font-black tracking-tight text-zinc-900">EducationRev</span>
             {!isAppAdmin && !isSchoolHead && !isTeacher && (
               <p className="truncate text-[10px] font-black uppercase tracking-[0.18em] text-zinc-400">
                 {portalEditionLabel}
@@ -421,7 +421,7 @@ export default function Layout({ user, profile, portal = 'highschool' }: LayoutP
                   <Menu size={24} />
                 </button>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-black text-zinc-900">EduRev AI</p>
+                  <p className="truncate text-sm font-black text-zinc-900">EducationRev</p>
                   {!isAppAdmin && !isSchoolHead && !isTeacher && (
                     <p className="truncate text-[9px] font-black uppercase tracking-[0.16em] text-zinc-400">
                       {portalEditionLabel}
@@ -648,10 +648,10 @@ export default function Layout({ user, profile, portal = 'highschool' }: LayoutP
                 <div className="mb-4 flex shrink-0 items-center justify-between p-6">
                   <div className="flex items-center gap-3">
                     <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl bg-transparent">
-                      <img src={appLogo} alt="EduRev AI logo" className="h-full w-full object-contain" />
+                      <img src={appLogo} alt="EducationRev logo" className="h-full w-full object-contain" />
                     </div>
                     <div className="min-w-0">
-                      <span className="block text-xl font-black tracking-tight text-zinc-900">EduRev AI</span>
+                      <span className="block text-xl font-black tracking-tight text-zinc-900">EducationRev</span>
                       {!isAppAdmin && !isSchoolHead && !isTeacher && (
                         <p className="truncate text-[10px] font-black uppercase tracking-[0.18em] text-zinc-400">
                           {portalEditionLabel}

@@ -113,7 +113,7 @@ export default function AppAdminPortal() {
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-100">
               <GraduationCap className="h-5 w-5" />
             </div>
-            <p className="whitespace-nowrap text-[20px] font-black tracking-tight text-zinc-950">EduRev AI</p>
+            <p className="whitespace-nowrap text-[20px] font-black tracking-tight text-zinc-950">EducationRev</p>
           </div>
 
           <div className="flex-1 overflow-y-auto px-4 py-8">
@@ -379,7 +379,7 @@ function StemInitiativesStakeholderPage() {
             </div>
             <h1 className="mt-5 text-[3.2rem] font-black leading-[0.98] tracking-tight text-zinc-950">STEMHER and STEMHIM</h1>
             <p className="mt-4 max-w-3xl text-lg font-medium leading-8 text-zinc-500">
-              This side is for school leaders and decision-makers. It shows why the initiative exists, what outcomes it should improve, and how it positions EduRev AI as a stronger partner for student retention in STEM.
+              This side is for school leaders and decision-makers. It shows why the initiative exists, what outcomes it should improve, and how it positions EducationRev as a stronger partner for student retention in STEM.
             </p>
           </div>
 

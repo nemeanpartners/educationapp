@@ -97,7 +97,7 @@ export default function SchoolHeadPortal() {
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-lg shadow-emerald-100">
               <GraduationCap className="h-5 w-5" />
             </div>
-            <p className="whitespace-nowrap text-[20px] font-black tracking-tight text-zinc-950">EduRev AI</p>
+            <p className="whitespace-nowrap text-[20px] font-black tracking-tight text-zinc-950">EducationRev</p>
           </div>
 
           <div className="flex-1 overflow-y-auto px-4 py-8">

@@ -336,10 +336,10 @@ export default function Auth() {
         <div className="rounded-[32px] border border-zinc-200/80 bg-white px-6 py-8 shadow-[0_18px_60px_rgba(15,23,42,0.06)] sm:px-8">
           <div className="flex flex-col items-center text-center">
             <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-3xl bg-transparent">
-              <img src={appLogo} alt="EduRev logo" className="h-full w-full object-contain" />
+              <img src={appLogo} alt="EducationRev logo" className="h-full w-full object-contain" />
             </div>
             <h1 className="mt-6 text-4xl font-black tracking-tight text-zinc-950 sm:text-[2.8rem]">
-              EduRevolution AI
+              EducationRev
             </h1>
             <p className="mt-4 max-w-2xl text-base font-medium leading-7 text-zinc-500 sm:text-lg">
               Choose an education level portal, then sign in to the matching workspace.
@@ -349,7 +349,7 @@ export default function Auth() {
           <div className="mt-8 rounded-[28px] border border-zinc-200 bg-zinc-50/80 p-5 sm:p-6">
             <div className="flex items-start gap-4">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-sm">
-                <img src={appLogo} alt="EduRev logo" className="h-full w-full object-contain" />
+                <img src={appLogo} alt="EducationRev logo" className="h-full w-full object-contain" />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">Student Portal</p>

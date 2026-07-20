@@ -1486,10 +1486,10 @@ app.get("/support", (_req, res) => {
 
     <section class="card">
       <h2>Contact support</h2>
-      <p>Email: <a href="mailto:christinalucas1216@gmail.com?subject=EducationRev%20Support">christinalucas1216@gmail.com</a></p>
+      <p>Email: <a href="mailto:nemeanpartnersptyltd@gmail.com?subject=EducationRev%20Support">nemeanpartnersptyltd@gmail.com</a></p>
       <p>Include your device type, macOS version, the sign-in method you used, and a short description of the issue.</p>
       <div class="actions">
-        <a class="button" href="mailto:christinalucas1216@gmail.com?subject=EducationRev%20Support">Email Support</a>
+        <a class="button" href="mailto:nemeanpartnersptyltd@gmail.com?subject=EducationRev%20Support">Email Support</a>
         <a href="/auth">Return to EducationRev</a>
       </div>
     </section>

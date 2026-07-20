@@ -61,7 +61,7 @@ function AppAdminLoginPanel() {
               <GraduationCap size={26} />
             </div>
             <div>
-              <p className="text-sm font-black uppercase tracking-[0.24em] text-indigo-200">EduRev AI</p>
+              <p className="text-sm font-black uppercase tracking-[0.24em] text-indigo-200">EducationRev</p>
               <h1 className="text-3xl font-black tracking-tight">App Admin Portal</h1>
             </div>
           </div>

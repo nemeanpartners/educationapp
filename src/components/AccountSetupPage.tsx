@@ -107,7 +107,7 @@ export default function AccountSetupPage({ user, profile, portal }: AccountSetup
   const [error, setError] = useState('');
   const searchRequestIdRef = useRef(0);
   const portalName = isUniversityPortal ? 'University Portal' : 'High School Portal';
-  const portalEditionLabel = isUniversityPortal ? 'EduRev University' : 'EduRev HighSchool';
+  const portalEditionLabel = isUniversityPortal ? 'EducationRev University' : 'EducationRev HighSchool';
 
   const resolvedDisplayName = useMemo(() => displayName.trim() || profile?.displayName || user.displayName || 'Student', [displayName, profile?.displayName, user.displayName]);
 

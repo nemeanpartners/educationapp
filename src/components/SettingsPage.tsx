@@ -1256,7 +1256,7 @@ export default function SettingsPage({ user, profile }: SettingsPageProps) {
         <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
           <div className={cn(isUniversityPortal ? 'rounded-[1.6rem] border border-white/70 bg-white/72 p-5 shadow-[0_14px_30px_rgba(15,23,42,0.04)] backdrop-blur-xl' : 'rounded-2xl border border-zinc-200 bg-white p-5')}>
             <p className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400">App info</p>
-            <h2 className="mt-1 text-xl font-black text-zinc-900">EduRev University</h2>
+            <h2 className="mt-1 text-xl font-black text-zinc-900">EducationRev University</h2>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               <div className={innerPanelClass}>
                 <p className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-400">Version</p>
@@ -1268,8 +1268,8 @@ export default function SettingsPage({ user, profile }: SettingsPageProps) {
               </div>
             </div>
             <div className={cn('mt-4', innerPanelClass)}>
-              <p className="text-sm font-black text-zinc-900">EduRev AI</p>
-              <p className="mt-2 text-sm font-medium leading-6 text-zinc-500">Copyright © 2026 EduRev AI. All rights reserved.</p>
+              <p className="text-sm font-black text-zinc-900">EducationRev</p>
+              <p className="mt-2 text-sm font-medium leading-6 text-zinc-500">Copyright © 2026 EducationRev. All rights reserved.</p>
               <p className="mt-2 text-sm font-medium leading-6 text-zinc-500">University edition for student workflow, study systems, and academic support.</p>
             </div>
           </div>
