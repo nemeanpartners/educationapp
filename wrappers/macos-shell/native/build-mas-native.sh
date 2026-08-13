@@ -12,7 +12,7 @@ CLEAN_APP_PATH="$BUILD_DIR/clean/EducationRev.app"
 DIST_APP_PATH="$DIST_DIR/EducationRev.app"
 PKG_PATH="$DIST_DIR/EducationRev-1.1.1-universal.pkg"
 UNSIGNED_PKG_PATH="$BUILD_DIR/EducationRev-1.1.1-universal-unsigned.pkg"
-STAGE_ROOT="$BUILD_DIR/package-root"
+PAYLOAD_STAGE="$BUILD_DIR/product-payload"
 APP_IDENTITY="Apple Distribution: Nemean Partners Pty Ltd. (7ZU4NQ9RVT)"
 INSTALLER_IDENTITY="3rd Party Mac Developer Installer: Nemean Partners Pty Ltd. (7ZU4NQ9RVT)"
 
@@ -71,27 +71,28 @@ mkdir -p "$(dirname "$CLEAN_APP_PATH")"
 strip_metadata "$CLEAN_APP_PATH"
 /usr/bin/codesign --verify --deep --strict --verbose=2 "$CLEAN_APP_PATH"
 
-mkdir -p "$STAGE_ROOT/Applications"
-/usr/bin/ditto --norsrc --noextattr "$CLEAN_APP_PATH" "$STAGE_ROOT/Applications/EducationRev.app"
-strip_metadata "$STAGE_ROOT/Applications/EducationRev.app"
+if [ -e "$PKG_PATH" ]; then
+  mv "$PKG_PATH" "$PKG_PATH.backup-$(date +%Y%m%d%H%M%S)"
+fi
 
-/usr/bin/pkgbuild \
-  --root "$STAGE_ROOT" \
-  --identifier "ai.edurevolution.wrapper.ios" \
-  --version "1.1.1" \
-  --install-location "/" \
+/usr/bin/productbuild \
+  --component "$CLEAN_APP_PATH" /Applications \
   --sign "$INSTALLER_IDENTITY" \
   "$PKG_PATH"
+strip_metadata "$PKG_PATH"
 
-EXPANDED_PKG="$BUILD_DIR/expanded-pkg"
+EXPANDED_PKG="$BUILD_DIR/expanded-product"
 /usr/sbin/pkgutil --expand "$PKG_PATH" "$EXPANDED_PKG"
 PAYLOAD_PATH="$(/usr/bin/find "$EXPANDED_PKG" -type f -name Payload -print -quit)"
 COMPONENT_DIR="$(dirname "$PAYLOAD_PATH")"
+mkdir -p "$PAYLOAD_STAGE"
+/usr/bin/ditto --norsrc --noextattr "$CLEAN_APP_PATH" "$PAYLOAD_STAGE/EducationRev.app"
+strip_metadata "$PAYLOAD_STAGE"
 (
-  cd "$STAGE_ROOT"
+  cd "$PAYLOAD_STAGE"
   /usr/bin/find . -print | COPYFILE_DISABLE=1 COPY_EXTENDED_ATTRIBUTES_DISABLE=1 /usr/bin/cpio -o --format odc 2>/dev/null | /usr/bin/gzip -c > "$COMPONENT_DIR/Payload"
 )
-/usr/bin/mkbom "$STAGE_ROOT" "$COMPONENT_DIR/Bom"
+/usr/bin/mkbom "$PAYLOAD_STAGE" "$COMPONENT_DIR/Bom"
 /usr/sbin/pkgutil --flatten "$EXPANDED_PKG" "$UNSIGNED_PKG_PATH"
 /usr/bin/productsign --sign "$INSTALLER_IDENTITY" "$UNSIGNED_PKG_PATH" "$PKG_PATH"
 strip_metadata "$PKG_PATH"
