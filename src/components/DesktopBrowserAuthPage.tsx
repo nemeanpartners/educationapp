@@ -9,16 +9,18 @@ import {
   type UserCredential,
 } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
-import { auth, googleProvider, microsoftProvider } from '../firebase';
+import { appleProvider, auth, googleProvider, microsoftProvider } from '../firebase';
+import { APP_BRAND_NAME } from '../lib/branding';
 import { getStoredStudentPortal, setStoredStudentPortal, studentPortalHome, type StudentPortalType } from '../lib/portal';
 
-type SupportedProvider = 'google' | 'microsoft';
+type SupportedProvider = 'apple' | 'google' | 'microsoft';
 
 function readPortal(value: string | null): StudentPortalType {
   return value === 'university' ? 'university' : 'highschool';
 }
 
 function readProvider(value: string | null): SupportedProvider {
+  if (value === 'apple') return 'apple';
   return value === 'microsoft' ? 'microsoft' : 'google';
 }
 
@@ -50,7 +52,7 @@ function extractDesktopProviderPayload(result: UserCredential, provider: Support
   const accessToken = credential?.accessToken || '';
   const idToken = credential?.idToken || '';
   if (!accessToken && !idToken) {
-    throw new Error('Microsoft sign-in completed, but the app did not receive a usable credential.');
+      throw new Error(`${provider === 'apple' ? 'Apple' : 'Microsoft'} sign-in completed, but the app did not receive a usable credential.`);
   }
   return { accessToken, idToken };
 }
@@ -80,13 +82,13 @@ export function DesktopBrowserAuthPage() {
   const handleBrowserLogin = async () => {
     try {
       setStatus('working');
-      setMessage(provider === 'google' ? 'Opening your Google account chooser…' : 'Opening your Microsoft account chooser…');
+      setMessage(provider === 'apple' ? 'Opening Continue with Apple…' : provider === 'google' ? 'Opening your Google account chooser…' : 'Opening your Microsoft account chooser…');
       await setPersistence(auth, browserLocalPersistence);
-      const result = await signInWithPopup(auth, provider === 'google' ? googleProvider : microsoftProvider);
+      const result = await signInWithPopup(auth, provider === 'apple' ? appleProvider : provider === 'google' ? googleProvider : microsoftProvider);
       const tokens = extractDesktopProviderPayload(result, provider);
       const returnUrl = buildAppReturnUrl(provider, portal, tokens);
       setStatus('returning');
-      setMessage('Sign-in complete. Returning you to EduRevolution…');
+      setMessage(`Sign-in complete. Returning you to ${APP_BRAND_NAME}...`);
       window.location.replace(returnUrl);
     } catch (error: any) {
       console.error('Desktop browser auth failed:', error);
@@ -100,10 +102,10 @@ export function DesktopBrowserAuthPage() {
       <div className="w-full max-w-2xl rounded-[32px] border border-white/80 bg-white/92 p-8 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur">
         <p className="text-xs font-black uppercase tracking-[0.24em] text-zinc-400">Browser Sign-In</p>
         <h1 className="mt-4 text-4xl font-black tracking-tight text-zinc-950">
-          {provider === 'google' ? 'Continue with Google' : 'Continue with Microsoft'}
+          {provider === 'apple' ? 'Continue with Apple' : provider === 'google' ? 'Continue with Google' : 'Continue with Microsoft'}
         </h1>
         <p className="mt-4 text-lg font-medium leading-8 text-zinc-500">
-          This secure sign-in runs in your default browser so you can use your saved accounts, then returns you to the EduRevolution app automatically.
+          This secure sign-in runs in your default browser so you can use your saved accounts, then returns you to {APP_BRAND_NAME} automatically.
         </p>
 
         <div className="mt-8 rounded-[28px] border border-zinc-200 bg-zinc-50/80 p-6">
@@ -112,7 +114,7 @@ export function DesktopBrowserAuthPage() {
           </p>
           <p className="mt-3 text-xl font-bold tracking-tight text-zinc-900">{message}</p>
           <p className="mt-4 text-sm font-medium leading-7 text-zinc-500">
-            If EduRevolution does not come back to the front automatically, reopen the app after completing sign-in here.
+            If {APP_BRAND_NAME} does not come back to the front automatically, reopen the app after completing sign-in here.
           </p>
           <button
             type="button"
@@ -122,9 +124,11 @@ export function DesktopBrowserAuthPage() {
           >
             {status === 'working'
               ? 'Opening…'
-              : provider === 'google'
-                ? 'Continue with Google'
-                : 'Continue with Microsoft'}
+              : provider === 'apple'
+                ? 'Continue with Apple'
+                : provider === 'google'
+                  ? 'Continue with Google'
+                  : 'Continue with Microsoft'}
           </button>
         </div>
       </div>
@@ -134,7 +138,7 @@ export function DesktopBrowserAuthPage() {
 
 export function DesktopCompleteAuthPage() {
   const navigate = useNavigate();
-  const [message, setMessage] = useState('Finishing sign-in inside EduRevolution…');
+  const [message, setMessage] = useState(`Finishing sign-in inside ${APP_BRAND_NAME}...`);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -157,7 +161,7 @@ export function DesktopCompleteAuthPage() {
         if (provider === 'google') {
           credential = GoogleAuthProvider.credential(idToken || null, accessToken || null);
         } else {
-          credential = new OAuthProvider('microsoft.com').credential({
+          credential = new OAuthProvider(provider === 'apple' ? 'apple.com' : 'microsoft.com').credential({
             idToken: idToken || undefined,
             accessToken: accessToken || undefined,
           });
@@ -173,7 +177,7 @@ export function DesktopCompleteAuthPage() {
         navigate(studentPortalHome(portal), { replace: true });
       } catch (error: any) {
         console.error('Desktop wrapper sign-in completion failed:', error);
-        setErrorMessage(error?.message || 'EduRevolution could not finish the sign-in return.');
+        setErrorMessage(error?.message || `${APP_BRAND_NAME} could not finish the sign-in return.`);
       }
     };
 
@@ -185,7 +189,7 @@ export function DesktopCompleteAuthPage() {
       <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.08),_transparent_32%),linear-gradient(180deg,_#f8fafc_0%,_#f4f7fb_100%)] px-6 py-12 font-sans">
         <div className="w-full max-w-2xl rounded-[32px] border border-white/80 bg-white/92 p-8 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur">
           <p className="text-xs font-black uppercase tracking-[0.24em] text-rose-400">Return Failed</p>
-          <h1 className="mt-4 text-4xl font-black tracking-tight text-zinc-950">EduRevolution could not finish sign-in</h1>
+          <h1 className="mt-4 text-4xl font-black tracking-tight text-zinc-950">{APP_BRAND_NAME} could not finish sign-in</h1>
           <p className="mt-4 text-lg font-medium leading-8 text-zinc-500">{errorMessage}</p>
           <button
             type="button"

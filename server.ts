@@ -685,7 +685,7 @@ async function createDefaultWorkbookBuffer(userId: string) {
         children: [
           new Paragraph({
             heading: HeadingLevel.TITLE,
-            children: [new TextRun("Education Revolution Workbook")],
+            children: [new TextRun("EducationRev Workbook")],
           }),
           new Paragraph({
             children: [new TextRun(`Student workbook for ${userId}`)],
@@ -702,7 +702,7 @@ async function createDefaultWorkbookBuffer(userId: string) {
 }
 
 async function ensureWorkbookFolder(accessToken: string) {
-  const encodedFolder = encodeURIComponent("Education Revolution Workbooks");
+  const encodedFolder = encodeURIComponent("EducationRev Workbooks");
   try {
     await graphRequest(accessToken, `/me/drive/root:/${encodedFolder}`);
     return;
@@ -716,7 +716,7 @@ async function ensureWorkbookFolder(accessToken: string) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      name: "Education Revolution Workbooks",
+      name: "EducationRev Workbooks",
       folder: {},
       "@microsoft.graph.conflictBehavior": "fail",
     }),
@@ -724,7 +724,7 @@ async function ensureWorkbookFolder(accessToken: string) {
 }
 
 async function getWorkbookDriveItem(accessToken: string, fileName: string) {
-  const encodedFolder = encodeURIComponent("Education Revolution Workbooks");
+  const encodedFolder = encodeURIComponent("EducationRev Workbooks");
   const response = await graphRequest(
     accessToken,
     `/me/drive/root:/${encodedFolder}/${encodeURIComponent(fileName)}`,
@@ -733,7 +733,7 @@ async function getWorkbookDriveItem(accessToken: string, fileName: string) {
 }
 
 async function uploadWorkbook(accessToken: string, fileName: string, buffer: Buffer) {
-  const encodedFolder = encodeURIComponent("Education Revolution Workbooks");
+  const encodedFolder = encodeURIComponent("EducationRev Workbooks");
   const response = await graphRequest(
     accessToken,
     `/me/drive/root:/${encodedFolder}/${encodeURIComponent(fileName)}:/content`,
@@ -1260,7 +1260,7 @@ app.post("/api/jaas/token", async (req, res) => {
       ? displayName.trim()
       : typeof callerPayload?.name === "string" && callerPayload.name.trim()
         ? callerPayload.name.trim()
-        : "EduRev University Student";
+        : "EducationRev University Student";
   const safeEmail =
     typeof email === "string" && email.trim()
       ? email.trim()
@@ -1484,6 +1484,10 @@ function sendIndex(res: express.Response) {
 
 // Root route
 app.get("/", (_req, res) => {
+  sendIndex(res);
+});
+
+app.get("/landingpage", (_req, res) => {
   sendIndex(res);
 });
 

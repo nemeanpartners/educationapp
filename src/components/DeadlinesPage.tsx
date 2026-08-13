@@ -269,10 +269,10 @@ export default function DeadlinesPage() {
     const calendar = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
-      'PRODID:-//EduRev AI//Deadlines//EN',
+      'PRODID:-//EducationRev//Deadlines//EN',
       'CALSCALE:GREGORIAN',
       'METHOD:PUBLISH',
-      'X-WR-CALNAME:EduRev Deadlines',
+      'X-WR-CALNAME:EducationRev Deadlines',
       events,
       'END:VCALENDAR',
     ].join('\r\n');

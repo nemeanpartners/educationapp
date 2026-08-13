@@ -4,7 +4,53 @@
     <meta name="google-site-verification" content="Ns30n3egfWplNaSYXjqMAWzNwgLIGD9vmr48N9HaC3I" />
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>My Google AI Studio App</title>
+    <meta
+      name="description"
+      content="EducationRev helps high school and university students plan classes, manage study tasks, track progress, and access learning tools."
+    />
+    <title>EducationRev</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: #f8fbff;
+        color: #111827;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      #root:empty::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background:
+          radial-gradient(circle at top, rgba(99, 102, 241, 0.1), transparent 34%),
+          linear-gradient(180deg, #f8fbff 0%, #eef5fb 100%);
+      }
+
+      #root:empty::after {
+        content: "Opening EducationRev\A EducationRev helps students plan classes, manage study tasks, track progress, and access learning tools.";
+        white-space: pre-line;
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        width: min(560px, calc(100vw - 48px));
+        transform: translate(-50%, -50%);
+        box-sizing: border-box;
+        padding: 96px 32px 36px;
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        border-radius: 28px;
+        background:
+          url("/edurevlogoimage.png") center 32px / 52px 52px no-repeat,
+          rgba(255, 255, 255, 0.92);
+        box-shadow: 0 24px 80px rgba(15, 23, 42, 0.1);
+        color: #4b5563;
+        text-align: center;
+        font-size: 16px;
+        font-weight: 650;
+        line-height: 1.55;
+      }
+    </style>
   </head>
   <body> 
     <div id="root"></div>

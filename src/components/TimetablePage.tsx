@@ -650,7 +650,7 @@ export default function TimetablePage() {
 
     const events = entries.map((entry) => {
       const eventDate = getNextDateForDay(entry.day);
-      const description = entry.teacher ? `Teacher: ${entry.teacher}` : 'Class timetable event from EduRev AI.';
+      const description = entry.teacher ? `Teacher: ${entry.teacher}` : 'Class timetable event from EducationRev.';
       return [
         'BEGIN:VEVENT',
         `UID:${entry.id}@edurev-ai`,
@@ -668,10 +668,10 @@ export default function TimetablePage() {
     const calendar = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
-      'PRODID:-//EduRev AI//Class Timetable//EN',
+      'PRODID:-//EducationRev//Class Timetable//EN',
       'CALSCALE:GREGORIAN',
       'METHOD:PUBLISH',
-      'X-WR-CALNAME:EduRev Class Timetable',
+      'X-WR-CALNAME:EducationRev Class Timetable',
       events,
       'END:VCALENDAR',
     ].join('\r\n');

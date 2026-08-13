@@ -462,7 +462,7 @@ Rules:
                   <div className="flex h-full min-h-[420px] items-center justify-center text-center">
                     <div className="px-6">
                       <p className="text-sm font-black uppercase tracking-[0.18em] text-zinc-400">Google</p>
-                      <p className="mt-3 text-base font-bold text-zinc-900">Search Google inside EduRev</p>
+                      <p className="mt-3 text-base font-bold text-zinc-900">Search Google inside EducationRev</p>
                       <p className="mt-2 text-sm font-medium text-zinc-500">
                         Use the search card above or search directly in the embedded Google page here.
                       </p>

@@ -25,6 +25,7 @@ export function isNativeIosGoogleWrapper(): boolean {
     (
       !!window.__IS_NATIVE_IOS_GOOGLE_WRAPPER ||
       new URLSearchParams(window.location.search).get('ios_wrapper') === '1' ||
+      window.navigator.userAgent.includes('EducationRevWrapper/1.0') ||
       window.navigator.userAgent.includes('EduRevolutionAIWrapper/1.0')
     );
 

@@ -17,10 +17,7 @@
     "rewrites": [
       {
         "source": "**",
-        "run": {
-          "serviceId": "edurevolution-ai",
-          "region": "us-west1"
-        }
+        "destination": "/index.html"
       }
     ]
   }

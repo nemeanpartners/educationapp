@@ -85,7 +85,7 @@ export default function EmbeddedJitsiRoom({
         setError(null);
         const idToken = await auth.currentUser?.getIdToken();
         if (!idToken) {
-          throw new Error('You need to be signed in to open the EduRev meeting room.');
+          throw new Error('You need to be signed in to open the EducationRev meeting room.');
         }
 
         const jwtResponse = await fetch('/api/jaas/token', {
@@ -107,7 +107,7 @@ export default function EmbeddedJitsiRoom({
           throw new Error(
             typeof jwtPayload?.error === 'string'
               ? jwtPayload.error
-              : 'Unable to create a secure EduRev meeting token.',
+              : 'Unable to create a secure EducationRev meeting token.',
           );
         }
 

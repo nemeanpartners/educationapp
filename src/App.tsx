@@ -82,9 +82,11 @@ import ResearchDeskPage from './components/ResearchDeskPage';
 import TeamworkPage from './components/TeamworkPage';
 import UniversityReportBuilderPage from './components/UniversityReportBuilderPage';
 import MeetingRoomPage from './components/MeetingRoomPage';
+import LandingPage from './components/LandingPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { detectStudentPortalFromPath, getStoredStudentPortal, setStoredStudentPortal, stripStudentPortalPrefix, studentPortalHome, studentPortalPath, type StudentPortalType } from './lib/portal';
 import { getAppReviewSeedFlashcardSets, getAppReviewSeedQuizzes } from './lib/study-presets';
+import { loadGlobalUserProfile, mergeGlobalUserProfile, saveGlobalUserProfile } from './lib/global-user-profile';
 
 const APP_REVIEW_UID = 'QlCp2eu9eEdIGc5LH9mXRilzcGx2';
 const APP_REVIEW_EMAIL = 'tryonapptestuser@gmail.com';
@@ -129,7 +131,7 @@ function getAppReviewProfileSeed(portal: StudentPortalType): Partial<UserProfile
   return {
     ...baseSeed,
     gradeLevel: '11',
-    schoolName: 'EduRev Demo College',
+    schoolName: 'EducationRev Demo College',
   };
 }
 
@@ -143,7 +145,6 @@ function withAccountProfileFields(profile: UserProfile, firebaseUser: User): Use
 
   return {
     ...profile,
-    ...(reviewSeed || {}),
     displayName: profile.displayName || firebaseUser.displayName || reviewSeed?.displayName || (isGuestAccount ? 'Guest User' : 'Student'),
     photoURL: profile.photoURL || firebaseUser.photoURL || '',
     email: profile.email || firebaseUser.email || reviewSeed?.email || '',
@@ -789,6 +790,10 @@ export default function App() {
   const isAuthRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/auth');
 
   useEffect(() => {
+    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('shell') === 'macos') {
+      window.localStorage.setItem('edurev-desktop-shell', '1');
+    }
+
     const loadingFallback = window.setTimeout(() => {
       setLoading(false);
     }, 2500);
@@ -839,7 +844,16 @@ export default function App() {
                 })()
               : null;
 
-          const immediateProfile = cachedProfile || fallbackProfile;
+          let globalProfile: Awaited<ReturnType<typeof loadGlobalUserProfile>> = null;
+          try {
+            globalProfile = await loadGlobalUserProfile(firebaseUser.uid);
+          } catch (globalProfileError) {
+            console.error('Global profile load failed:', globalProfileError);
+          }
+
+          const immediateProfile = cachedProfile
+            ? mergeGlobalUserProfile(cachedProfile, globalProfile)
+            : mergeGlobalUserProfile(fallbackProfile, globalProfile);
           setProfile(immediateProfile);
           if (typeof window !== 'undefined') {
             window.localStorage.setItem(profileCacheKey(activePortal), JSON.stringify(immediateProfile));
@@ -855,7 +869,7 @@ export default function App() {
             const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
             if (userDoc.exists()) {
               const existingProfile = userDoc.data() as UserProfile;
-              const nextProfile = withAccountProfileFields(existingProfile, firebaseUser);
+              const nextProfile = mergeGlobalUserProfile(withAccountProfileFields(existingProfile, firebaseUser), globalProfile);
 
               if (
                 existingProfile.pronouns !== nextProfile.pronouns ||
@@ -879,6 +893,8 @@ export default function App() {
                 await setDoc(doc(db, 'users', firebaseUser.uid), nextProfile, { merge: true });
               }
 
+              await saveGlobalUserProfile(firebaseUser.uid, nextProfile);
+
               if (nextProfile.accountType !== 'guest') {
                 await syncUserDirectoryAcrossPortals(nextProfile, activePortal);
               }
@@ -888,13 +904,15 @@ export default function App() {
                 window.localStorage.setItem(profileCacheKey(activePortal), JSON.stringify(nextProfile));
               }
             } else {
-              await setDoc(doc(db, 'users', firebaseUser.uid), fallbackProfile);
-              if (fallbackProfile.accountType !== 'guest') {
-                await syncUserDirectoryAcrossPortals(fallbackProfile, activePortal);
+              const nextFallbackProfile = mergeGlobalUserProfile(fallbackProfile, globalProfile);
+              await setDoc(doc(db, 'users', firebaseUser.uid), nextFallbackProfile);
+              await saveGlobalUserProfile(firebaseUser.uid, nextFallbackProfile);
+              if (nextFallbackProfile.accountType !== 'guest') {
+                await syncUserDirectoryAcrossPortals(nextFallbackProfile, activePortal);
               }
-              setProfile(fallbackProfile);
+              setProfile(nextFallbackProfile);
               if (typeof window !== 'undefined') {
-                window.localStorage.setItem(profileCacheKey(activePortal), JSON.stringify(fallbackProfile));
+                window.localStorage.setItem(profileCacheKey(activePortal), JSON.stringify(nextFallbackProfile));
               }
             }
           } catch (profileError) {
@@ -924,6 +942,7 @@ export default function App() {
         <ErrorBoundary>
           <Router>
             <Routes>
+              <Route path="/landingpage" element={<LandingPage />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/auth/desktop-browser" element={<DesktopBrowserAuthPage />} />
               <Route path="/auth/desktop-complete" element={<DesktopCompleteAuthPage />} />
@@ -948,6 +967,7 @@ export default function App() {
       <Router>
         <Routes>
           <Route path="/auth" element={(!user || forceDeletedAuthScreen || forcePortalChoiceScreen) ? <Auth /> : <AuthSuccessRedirect />} />
+          <Route path="/landingpage" element={<LandingPage />} />
           <Route path="/auth/desktop-browser" element={<DesktopBrowserAuthPage />} />
           <Route path="/auth/desktop-complete" element={<DesktopCompleteAuthPage />} />
           <Route

@@ -694,7 +694,7 @@ export default function ClassProgressPage() {
               <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(155deg,rgba(255,255,255,0.62),rgba(255,255,255,0.18)_42%,rgba(255,255,255,0.08))]" />
               <div className="relative z-10 flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-400">Activity on EduRev</p>
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-400">Activity on EducationRev</p>
                   <h2 className="mt-2 text-2xl font-black text-zinc-950">Overall app activity</h2>
                   <p className="mt-2 text-sm font-medium leading-6 text-zinc-600">
                     Follow the student’s activity rhythm in {activeClass} by week or by day.

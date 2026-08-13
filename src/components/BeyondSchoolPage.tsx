@@ -200,7 +200,7 @@ function buildUniversityPrompt(profile: UserProfile, focusPrompt: string) {
     .filter(Boolean)
     .join('\n- ');
 
-  return `You are EduRev University's career direction engine.
+  return `You are EducationRev University's career direction engine.
 
 Create a personalized university opportunity map for this student.
 

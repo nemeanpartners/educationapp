@@ -185,7 +185,7 @@ export default function RewardsPage() {
             <p className={cn('mt-2 text-zinc-500', isPhone ? 'text-sm leading-6' : '')}>
               {isUniversityPortal
                 ? 'Track the recognitions, certificates, placements, and proof that you are moving forward even when university feels like it is all grind.'
-                : 'Track your own milestones and the badges you unlock across EduRev.'}
+                : 'Track your own milestones and the badges you unlock across EducationRev.'}
             </p>
           </div>
           <span className={cn('relative z-10 font-bold text-zinc-500', isPhone ? 'max-w-[7rem] text-right text-sm leading-4' : 'text-xl')}>
@@ -278,10 +278,10 @@ export default function RewardsPage() {
         <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-white/85" />
         <div className={cn('flex', isPhone ? 'flex-col gap-3' : 'items-end justify-between')}>
           <div className="relative z-10">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-400">EduRev app achievements</p>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-400">EducationRev app achievements</p>
             <h2 className="mt-2 text-3xl font-black text-zinc-950">Badges unlocked inside the app</h2>
             <p className="mt-2 text-sm font-medium leading-6 text-zinc-500">
-              These are the platform badges you unlock by using planning, wellbeing, AI, and study tools inside EduRev.
+              These are the platform badges you unlock by using planning, wellbeing, AI, and study tools inside EducationRev.
             </p>
           </div>
           <span className={cn('relative z-10 font-bold text-zinc-500', isPhone ? 'text-sm' : 'text-lg')}>

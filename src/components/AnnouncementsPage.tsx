@@ -244,7 +244,7 @@ export default function AnnouncementsPage() {
           </div>
           <h2 className="mt-4 text-2xl font-black text-zinc-950">No announcements right now</h2>
           <p className="mt-2 text-sm font-medium leading-6 text-zinc-500">
-            Add classes to your timetable first so EduRev can tailor class announcements here.
+            Add classes to your timetable first so EducationRev can tailor class announcements here.
           </p>
         </section>
       ) : (

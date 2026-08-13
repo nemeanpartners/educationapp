@@ -4,18 +4,21 @@ import {
   createUserWithEmailAndPassword,
   deleteUser,
   fetchSignInMethodsForEmail,
+  getRedirectResult,
   setPersistence,
   signInAnonymously,
   signInWithEmailAndPassword,
   signInWithPopup,
   updateProfile,
+  type AuthProvider,
 } from 'firebase/auth';
 import { Eye, EyeOff } from 'lucide-react';
 import { motion } from 'motion/react';
-import { auth, db, googleProvider, microsoftProvider } from '../firebase';
+import { appleProvider, auth, db, googleProvider, microsoftProvider } from '../firebase';
 import { bindNativeGoogleSignInBridge, isNativeIosGoogleWrapper, requestNativeGoogleSignIn } from '../lib/native-ios-google-auth';
 import { doc, getDoc, setDoc } from '../lib/portal-firestore';
 import { getStoredStudentPortal, setStoredStudentPortal, type StudentPortalType } from '../lib/portal';
+import { APP_BRAND_NAME } from '../lib/branding';
 import type { UserProfile } from '../types';
 
 type AuthMode = 'signin' | 'signup';
@@ -24,7 +27,9 @@ function isMacDesktopWrapper() {
   if (typeof window === 'undefined') return false;
   const params = new URLSearchParams(window.location.search);
   if (params.get('shell') === 'macos') return true;
-  return /Electron/i.test(window.navigator.userAgent || '');
+  return /Electron/i.test(window.navigator.userAgent || '')
+    || window.localStorage.getItem('edurev-desktop-shell') === '1'
+    || window.localStorage.getItem('edurev-wrapper-origin') === 'native-macos';
 }
 
 function normalizeEmail(value: string) {
@@ -77,9 +82,30 @@ export default function Auth() {
   const appLogo = '/edurevlogoimage.png';
 
   useEffect(() => {
-    setPersistence(auth, browserLocalPersistence).catch(() => {
-      // Ignore persistence fallback issues.
-    });
+    let active = true;
+
+    const finishPendingRedirect = async () => {
+      try {
+        await setPersistence(auth, browserLocalPersistence);
+        const result = await getRedirectResult(auth);
+        if (active && result?.user) {
+          setAuthError(null);
+          setIsLoggingIn(false);
+        }
+      } catch (error: any) {
+        if (active && error?.code !== 'auth/no-auth-event') {
+          console.error('Provider redirect completion failed:', error);
+          setAuthError({ code: error?.code, message: error?.message });
+          setIsLoggingIn(false);
+        }
+      }
+    };
+
+    finishPendingRedirect();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -108,7 +134,7 @@ export default function Auth() {
 
   const authErrorHint = useMemo(() => {
     if (authError?.code === 'auth/operation-not-allowed') {
-      return 'Enable the relevant Firebase Authentication providers for this project: Google, Microsoft, Email/Password, and Anonymous guest access.';
+      return 'Enable the relevant Firebase Authentication providers for this project: Apple, Google, Microsoft, Email/Password, and Anonymous guest access.';
     }
 
     if (authError?.code === 'auth/unauthorized-domain') {
@@ -134,14 +160,48 @@ export default function Auth() {
     return 'If Google or Microsoft access pages fail inside a wrapped app, check that OAuth is allowed for your domain and authorized return URLs.';
   }, [authError]);
 
-  const handleProviderLogin = async (provider: any) => {
+  const authErrorMessage = useMemo(() => {
+    if (!authError) return '';
+
+    if (authError.message && !authError.code) {
+      return authError.message;
+    }
+
+    if (authError.code === 'auth/popup-closed-by-user' || authError.code === 'auth/cancelled-popup-request') {
+      return 'Sign-in was cancelled. Choose Apple, Google, or Microsoft again to continue.';
+    }
+
+    if (authError.code === 'auth/operation-not-allowed') {
+      return 'This sign-in method is not enabled yet.';
+    }
+
+    if (authError.code === 'auth/unauthorized-domain') {
+      return 'This domain is not approved for sign-in yet.';
+    }
+
+    if (authError.message?.includes('This account is linked to')) {
+      return authError.message;
+    }
+
+    if (authError.code === 'auth/invalid-credential' || authError.code === 'auth/wrong-password' || authError.code === 'auth/user-not-found') {
+      return 'We could not sign in with that username or email and password. Check the details, or use Apple, Google, or Microsoft sign-in.';
+    }
+
+    return 'Sign-in could not be completed. Please try again.';
+  }, [authError]);
+
+  const handleProviderLogin = async (provider: AuthProvider) => {
     setAuthError(null);
     setIsLoggingIn(true);
     setStoredStudentPortal(selectedPortal);
 
     try {
       if (usingDesktopBrowserFlow) {
-        const providerName = provider === microsoftProvider ? 'microsoft' : 'google';
+        const providerName = provider === appleProvider
+          ? 'apple'
+          : provider === microsoftProvider
+            ? 'microsoft'
+            : 'google';
         const desktopAuthUrl = `${window.location.origin}/auth/desktop-browser?provider=${providerName}&portal=${selectedPortal}`;
         window.open(desktopAuthUrl, '_blank', 'noopener,noreferrer');
         return;
@@ -167,6 +227,14 @@ export default function Auth() {
     setStoredStudentPortal(selectedPortal);
 
     try {
+      if (!loginIdentifier.trim()) {
+        throw new Error('Enter your username or email.');
+      }
+
+      if (!loginPassword) {
+        throw new Error('Enter your password.');
+      }
+
       const email = await resolveEmailFromLoginIdentifier(loginIdentifier);
       await signInWithEmailAndPassword(auth, email, loginPassword);
     } catch (error: any) {
@@ -336,10 +404,10 @@ export default function Auth() {
         <div className="rounded-[32px] border border-zinc-200/80 bg-white px-6 py-8 shadow-[0_18px_60px_rgba(15,23,42,0.06)] sm:px-8">
           <div className="flex flex-col items-center text-center">
             <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-3xl bg-transparent">
-              <img src={appLogo} alt="EduRev logo" className="h-full w-full object-contain" />
+              <img src={appLogo} alt={`${APP_BRAND_NAME} logo`} className="h-full w-full object-contain" />
             </div>
             <h1 className="mt-6 text-4xl font-black tracking-tight text-zinc-950 sm:text-[2.8rem]">
-              EduRevolution AI
+              {APP_BRAND_NAME}
             </h1>
             <p className="mt-4 max-w-2xl text-base font-medium leading-7 text-zinc-500 sm:text-lg">
               Choose an education level portal, then sign in to the matching workspace.
@@ -349,7 +417,7 @@ export default function Auth() {
           <div className="mt-8 rounded-[28px] border border-zinc-200 bg-zinc-50/80 p-5 sm:p-6">
             <div className="flex items-start gap-4">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-sm">
-                <img src={appLogo} alt="EduRev logo" className="h-full w-full object-contain" />
+                <img src={appLogo} alt={`${APP_BRAND_NAME} logo`} className="h-full w-full object-contain" />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">Student Portal</p>
@@ -536,6 +604,16 @@ export default function Auth() {
                       <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-400">Quick sign-in</p>
                       <div className="mt-4 space-y-3">
                         <button
+                          onClick={() => handleProviderLogin(appleProvider)}
+                          disabled={isLoggingIn}
+                          aria-label="Continue with Apple"
+                          className="flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-black bg-black px-4 py-3 text-[15px] font-semibold text-white transition hover:bg-zinc-900 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70"
+                        >
+                          <span className="text-[18px] leading-none" aria-hidden="true"></span>
+                          <span>{isLoggingIn ? 'Continuing…' : 'Continue with Apple'}</span>
+                        </button>
+
+                        <button
                           onClick={() => handleProviderLogin(googleProvider)}
                           disabled={isLoggingIn}
                           className="flex w-full items-center justify-center gap-3 rounded-2xl border border-zinc-200 bg-white px-4 py-4 text-sm font-semibold text-zinc-700 transition-all hover:border-zinc-300 hover:bg-zinc-50 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70"
@@ -557,7 +635,7 @@ export default function Auth() {
                         <div className="mt-4 rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-4 text-left">
                           <p className="text-xs font-black uppercase tracking-[0.18em] text-indigo-500">Mac App Sign-In</p>
                           <p className="mt-2 text-sm font-semibold leading-6 text-indigo-900">
-                            Google and Microsoft sign-in open in your default browser so you get your normal saved account chooser, then EduRevolution brings you back into the app and completes sign-in automatically.
+                            Continue with Apple, Google, or Microsoft in your browser, then return to the app automatically.
                           </p>
                         </div>
                       ) : null}
@@ -587,16 +665,21 @@ export default function Auth() {
         {authError ? (
           <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm">
             <p className="font-black text-rose-800">Sign-in failed</p>
-            <p className="mt-1 font-semibold text-rose-700">
-              {authError.code ? `${authError.code}: ` : ''}
-              {authError.message || 'Unknown error'}
-            </p>
+            <p className="mt-1 font-semibold text-rose-700">{authErrorMessage}</p>
             <p className="mt-2 text-xs font-bold text-rose-700/80">{authErrorHint}</p>
           </div>
         ) : null}
 
         <div className="mt-4 text-center text-xs font-medium text-zinc-400">
-          By continuing, you agree to our Terms of Service and Privacy Policy.
+          By continuing, you agree to our{' '}
+          <a className="font-bold text-zinc-500 underline underline-offset-4 hover:text-zinc-800" href="/terms" target="_blank" rel="noreferrer">
+            Terms of Service
+          </a>{' '}
+          and{' '}
+          <a className="font-bold text-zinc-500 underline underline-offset-4 hover:text-zinc-800" href="/privacy" target="_blank" rel="noreferrer">
+            Privacy Policy
+          </a>
+          .
         </div>
       </motion.div>
     </div>

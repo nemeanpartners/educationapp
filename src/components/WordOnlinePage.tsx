@@ -23,7 +23,10 @@ declare global {
 
 function isDesktopWrapper() {
   if (typeof window === 'undefined') return false;
-  return Boolean(window.eduRevShell?.isDesktopShell) || /Electron/i.test(window.navigator.userAgent || '');
+  return Boolean(window.eduRevShell?.isDesktopShell)
+    || /Electron/i.test(window.navigator.userAgent || '')
+    || new URLSearchParams(window.location.search).get('shell') === 'macos'
+    || window.localStorage.getItem('edurev-desktop-shell') === '1';
 }
 
 export default function WordOnlinePage({ profile }: WordOnlinePageProps) {
@@ -31,6 +34,7 @@ export default function WordOnlinePage({ profile }: WordOnlinePageProps) {
   const activePortal = detectStudentPortalFromPath(location.pathname);
   const viewHostRef = useRef<HTMLDivElement | null>(null);
   const desktopShell = useMemo(() => isDesktopWrapper(), []);
+  const canEmbedWord = desktopShell && Boolean(window.eduRevShell?.openWordOnline);
 
   const syncEmbeddedBounds = () => {
     if (!desktopShell || !viewHostRef.current || !window.eduRevShell?.updateWordOnlineBounds) return;
@@ -44,7 +48,7 @@ export default function WordOnlinePage({ profile }: WordOnlinePageProps) {
   };
 
   useLayoutEffect(() => {
-    if (!desktopShell || !viewHostRef.current || !window.eduRevShell?.openWordOnline) return;
+    if (!canEmbedWord || !viewHostRef.current || !window.eduRevShell?.openWordOnline) return;
 
     const rect = viewHostRef.current.getBoundingClientRect();
     window.eduRevShell.openWordOnline({
@@ -68,9 +72,14 @@ export default function WordOnlinePage({ profile }: WordOnlinePageProps) {
       window.removeEventListener('scroll', syncEmbeddedBounds, true);
       window.eduRevShell?.closeWordOnline?.();
     };
-  }, [desktopShell]);
+  }, [canEmbedWord]);
 
   const openDirectly = () => {
+    if (desktopShell) {
+      window.location.assign(WORD_ONLINE_URL);
+      return;
+    }
+
     window.open(WORD_ONLINE_URL, '_blank', 'noopener,noreferrer');
   };
 
@@ -110,7 +119,7 @@ export default function WordOnlinePage({ profile }: WordOnlinePageProps) {
               Microsoft Word Online
             </h1>
             <p className="mt-1.5 max-w-3xl text-[13px] font-medium leading-5 text-zinc-500">
-              This page keeps Word Online inside the EduRev desktop app instead of trying to frame Microsoft in the browser.
+              This page keeps Word Online inside the EducationRev desktop app instead of trying to frame Microsoft in the browser.
             </p>
           </div>
 
@@ -118,7 +127,7 @@ export default function WordOnlinePage({ profile }: WordOnlinePageProps) {
             <div className="rounded-full border border-zinc-200 bg-zinc-50 px-3.5 py-2">
               <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-400">Version</p>
               <p className="mt-0.5 text-sm font-bold text-zinc-900">
-                {desktopShell ? 'Desktop app webview' : 'Browser web app'}
+                {desktopShell ? 'Desktop app' : 'Browser web app'}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -147,7 +156,7 @@ export default function WordOnlinePage({ profile }: WordOnlinePageProps) {
         ref={viewHostRef}
         className="min-h-0 flex-1 overflow-hidden rounded-[30px] border border-zinc-200 bg-white shadow-sm"
       >
-        {desktopShell ? (
+        {canEmbedWord ? (
           <div className="flex h-full min-h-[680px] items-center justify-center bg-zinc-50 text-center">
             <div className="max-w-xl px-6">
               <p className="text-sm font-black uppercase tracking-[0.18em] text-zinc-400">Word</p>
@@ -160,11 +169,19 @@ export default function WordOnlinePage({ profile }: WordOnlinePageProps) {
         ) : (
           <div className="flex h-full min-h-[680px] items-center justify-center bg-zinc-50 text-center">
             <div className="max-w-xl px-6">
-              <p className="text-sm font-black uppercase tracking-[0.18em] text-zinc-400">Browser limitation</p>
-              <h2 className="mt-3 text-2xl font-black text-zinc-950">Microsoft blocks framed Word Online</h2>
+              <p className="text-sm font-black uppercase tracking-[0.18em] text-zinc-400">Microsoft Word Online</p>
+              <h2 className="mt-3 text-2xl font-black text-zinc-950">Open Word in this window</h2>
               <p className="mt-3 text-sm font-medium leading-7 text-zinc-500">
-                Word Online refuses to load inside a normal browser iframe because Microsoft sets a frame-ancestors Content Security Policy. Use the desktop app wrapper for the embedded experience or open the direct Microsoft link here.
+                Microsoft blocks Word Online from being framed in a normal browser. In the desktop wrapper, use the direct Word link to load Microsoft Word Online as the main page.
               </p>
+              <button
+                type="button"
+                onClick={openDirectly}
+                className="mt-6 inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-black text-white transition hover:bg-indigo-700"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Open Microsoft Word Online
+              </button>
             </div>
           </div>
         )}

@@ -45,7 +45,7 @@ export default function MicrosoftWordWorkbookPage({ profile }: MicrosoftWordWork
               Open Microsoft Word Online
             </h1>
             <p className="mt-4 text-base font-medium leading-7 text-zinc-500">
-              This page opens the real Microsoft Word web app. The user signs into Microsoft Word directly and continues inside EduRevolution.
+              This page opens the real Microsoft Word web app. The user signs into Microsoft Word directly and continues inside EducationRev.
             </p>
           </div>
 

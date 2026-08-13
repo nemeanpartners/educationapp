@@ -336,7 +336,7 @@ export const geminiService = {
 
     const response = await geminiChat({
       model: FLASH_MODEL,
-      systemInstruction: `You are Study Buddy, a Gemini-powered tutor inside EduRevolution.
+      systemInstruction: `You are Study Buddy, a Gemini-powered tutor inside EducationRev.
 
 Student context:
 - Name: ${profile?.displayName || "Student"}
@@ -607,7 +607,7 @@ Requirements:
   }): Promise<LectureLiftResponse> {
     const shorthandNotes = clampPromptText(params.shorthandNotes, 9000);
     const transcript = clampPromptText(params.transcript, 30000);
-    const prompt = `You are Lecture Lift inside EduRevolution.
+    const prompt = `You are Lecture Lift inside EducationRev.
 
 Your job is to merge a student's rough shorthand class notes with the fuller lecture transcript.
 
@@ -629,7 +629,7 @@ Rules:
 - If the lecture contains examples, include the specific examples the teacher used.
 - If the lecture suggests exam importance, capture that in examFlags.
 - Flashcards must be concise and revision-ready.
-- Keywords should be short search phrases suitable for EduRevolution resources or library search.
+- Keywords should be short search phrases suitable for EducationRev resources or library search.
 - Suggested questions should sound like realistic study or exam practice prompts.
 - Do not use markdown tables.`;
     const config = {
@@ -755,7 +755,7 @@ Rules:
       async () => {
         const response = await geminiGenerateContent({
           model: FLASH_MODEL,
-          contents: `You are EduRev University's AI meeting assistant.
+          contents: `You are EducationRev University's AI meeting assistant.
 
 Transform rough live meeting notes into polished, useful university project notes.
 

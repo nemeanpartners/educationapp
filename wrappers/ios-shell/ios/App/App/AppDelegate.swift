@@ -50,7 +50,7 @@ final class WrapperWebViewController: UIViewController, WKNavigationDelegate, WK
         ))
         let view = WKWebView(frame: .zero, configuration: configuration)
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.customUserAgent = "EduRevolutionAIWrapper/1.0"
+        view.customUserAgent = "EducationRevWrapper/1.0"
         view.navigationDelegate = self
         view.uiDelegate = self
         view.allowsBackForwardNavigationGestures = true

@@ -12,6 +12,9 @@ export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({
   prompt: 'select_account',
 });
+export const appleProvider = new OAuthProvider('apple.com');
+appleProvider.addScope('email');
+appleProvider.addScope('name');
 export const microsoftProvider = new OAuthProvider('microsoft.com');
 export const microsoftTenantId = '665cc3da-a0bd-4a2b-b13d-a672538b0a70';
 microsoftProvider.setCustomParameters({

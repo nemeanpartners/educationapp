@@ -104,7 +104,7 @@ export function isUniversityJitsiProvisioned() {
 }
 
 export function getUniversityJitsiProvisioningMessage() {
-  return 'In-app EduRev meetings are temporarily unavailable.';
+  return 'In-app EducationRev meetings are temporarily unavailable.';
 }
 
 export function generateUniversityMeetingRoomName(params: {

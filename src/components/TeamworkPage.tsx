@@ -1238,7 +1238,7 @@ export default function TeamworkPage() {
                     <h2 className="text-lg font-black text-zinc-950">External meeting fallback</h2>
                   </div>
                   <p className="mt-3 text-sm leading-6 text-zinc-600">
-                    Use these only when a course or supervisor requires Zoom. The default team workflow should stay inside the EduRev Meeting Room.
+                    Use these only when a course or supervisor requires Zoom. The default team workflow should stay inside the EducationRev Meeting Room.
                   </p>
                   <div className="mt-4 grid gap-3">
                     <a

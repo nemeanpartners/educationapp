@@ -200,10 +200,10 @@ export default function CalendarYearPage() {
     const calendar = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
-      'PRODID:-//EduRev AI//Calendar Notes//EN',
+      'PRODID:-//EducationRev//Calendar Notes//EN',
       'CALSCALE:GREGORIAN',
       'METHOD:PUBLISH',
-      'X-WR-CALNAME:EduRev Calendar Notes',
+      'X-WR-CALNAME:EducationRev Calendar Notes',
       ...noteEvents,
       'END:VCALENDAR',
     ].join('\r\n');

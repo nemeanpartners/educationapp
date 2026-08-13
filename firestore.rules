@@ -271,6 +271,10 @@ service cloud.firestore {
       allow update: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) || isAdmin()) && request.resource.data.role == resource.data.role;
     }
 
+    match /globalUserProfiles/{userId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+    }
+
     match /usernameIndexes/{usernameLower} {
       allow read: if true;
       allow create, update: if isAuthenticated() &&

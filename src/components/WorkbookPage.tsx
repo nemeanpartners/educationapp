@@ -1313,7 +1313,7 @@ export default function WorkbookPage({ profile, variant = 'default' }: Assignmen
                 <p className="text-[11px] font-black uppercase tracking-[0.18em] text-sky-600">Microsoft Word</p>
                 <h2 className="mt-1 text-lg font-black text-zinc-950">Open this workbook in real Word</h2>
                 <p className="mt-1 text-sm font-medium leading-6 text-zinc-500">
-                  Use Word Online inside EduRevolution, or jump to the installed Word app from the Microsoft workspace screen.
+                  Use Word Online inside EducationRev, or jump to the installed Word app from the Microsoft workspace screen.
                 </p>
               </div>
               <button

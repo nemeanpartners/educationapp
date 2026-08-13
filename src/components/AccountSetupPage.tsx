@@ -5,6 +5,7 @@ import { ArrowLeft, GraduationCap, Loader2, School } from 'lucide-react';
 import { db } from '../firebase';
 import { UserProfile } from '../types';
 import { setStoredStudentPortal, studentPortalHome, type StudentPortalType } from '@/lib/portal';
+import { saveGlobalUserProfile } from '@/lib/global-user-profile';
 
 interface AccountSetupPageProps {
   user: User;
@@ -107,7 +108,7 @@ export default function AccountSetupPage({ user, profile, portal }: AccountSetup
   const [error, setError] = useState('');
   const searchRequestIdRef = useRef(0);
   const portalName = isUniversityPortal ? 'University Portal' : 'High School Portal';
-  const portalEditionLabel = isUniversityPortal ? 'EduRev University' : 'EduRev HighSchool';
+  const portalEditionLabel = isUniversityPortal ? 'EducationRev University' : 'EducationRev High School';
 
   const resolvedDisplayName = useMemo(() => displayName.trim() || profile?.displayName || user.displayName || 'Student', [displayName, profile?.displayName, user.displayName]);
 
@@ -225,6 +226,24 @@ export default function AccountSetupPage({ user, profile, portal }: AccountSetup
 
       await setDoc(doc(db, 'users', user.uid), {
         ...nextProfile,
+      }, { merge: true });
+      await saveGlobalUserProfile(user.uid, nextProfile);
+
+      await setDoc(doc(db, 'userDirectory', user.uid), {
+        uid: user.uid,
+        displayName: nextProfile.displayName,
+        email: nextProfile.email,
+        emailLower: nextProfile.email.toLowerCase().trim(),
+        photoURL: nextProfile.photoURL,
+        schoolName: nextProfile.schoolName,
+        gradeLevel: nextProfile.gradeLevel,
+        institutionName: nextProfile.institutionName,
+        universityStudyLevel: nextProfile.universityStudyLevel,
+        degreeProgram: nextProfile.degreeProgram,
+        secondDegreeProgram: nextProfile.secondDegreeProgram,
+        majors: nextProfile.majors,
+        minors: nextProfile.minors,
+        updatedAt: new Date().toISOString(),
       }, { merge: true });
 
       if (isUniversityPortal) {

@@ -1,6 +1,6 @@
 # Wrapper Apps
 
-This directory contains isolated wrapper shells for the live EduRevolution AI deployment.
+This directory contains isolated wrapper shells for the live Education Revolution deployment.
 
 ## iOS / iPadOS
 

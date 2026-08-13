@@ -24,7 +24,7 @@ export const THEME_STORAGE_KEY = 'edurev-theme-preference';
 export const APP_THEME_PALETTES: AppThemePalette[] = [
   {
     id: 'edurev',
-    name: 'EduRev Default',
+    name: 'EducationRev Default',
     description: 'The current indigo-led system colors.',
     swatches: ['#4f46e5', '#2563eb', '#14b8a6'],
   },
