@@ -83,19 +83,18 @@ strip_metadata "$STAGE_ROOT/Applications/EducationRev.app"
   --sign "$INSTALLER_IDENTITY" \
   "$PKG_PATH"
 
-if /usr/sbin/pkgutil --payload-files "$PKG_PATH" | /usr/bin/grep '/\._' >/dev/null; then
-  EXPANDED_PKG="$BUILD_DIR/expanded-pkg"
-  /usr/sbin/pkgutil --expand "$PKG_PATH" "$EXPANDED_PKG"
-  PAYLOAD_PATH="$(/usr/bin/find "$EXPANDED_PKG" -type f -name Payload -print -quit)"
-  COMPONENT_DIR="$(dirname "$PAYLOAD_PATH")"
-  (
-    cd "$STAGE_ROOT"
-    /usr/bin/find . -print | COPYFILE_DISABLE=1 COPY_EXTENDED_ATTRIBUTES_DISABLE=1 /usr/bin/cpio -o --format odc 2>/dev/null | /usr/bin/gzip -c > "$COMPONENT_DIR/Payload"
-  )
-  /usr/bin/mkbom "$STAGE_ROOT" "$COMPONENT_DIR/Bom"
-  /usr/sbin/pkgutil --flatten "$EXPANDED_PKG" "$UNSIGNED_PKG_PATH"
-  /usr/bin/productsign --sign "$INSTALLER_IDENTITY" "$UNSIGNED_PKG_PATH" "$PKG_PATH"
-fi
+EXPANDED_PKG="$BUILD_DIR/expanded-pkg"
+/usr/sbin/pkgutil --expand "$PKG_PATH" "$EXPANDED_PKG"
+PAYLOAD_PATH="$(/usr/bin/find "$EXPANDED_PKG" -type f -name Payload -print -quit)"
+COMPONENT_DIR="$(dirname "$PAYLOAD_PATH")"
+(
+  cd "$STAGE_ROOT"
+  /usr/bin/find . -print | COPYFILE_DISABLE=1 COPY_EXTENDED_ATTRIBUTES_DISABLE=1 /usr/bin/cpio -o --format odc 2>/dev/null | /usr/bin/gzip -c > "$COMPONENT_DIR/Payload"
+)
+/usr/bin/mkbom "$STAGE_ROOT" "$COMPONENT_DIR/Bom"
+/usr/sbin/pkgutil --flatten "$EXPANDED_PKG" "$UNSIGNED_PKG_PATH"
+/usr/bin/productsign --sign "$INSTALLER_IDENTITY" "$UNSIGNED_PKG_PATH" "$PKG_PATH"
+strip_metadata "$PKG_PATH"
 
 if /usr/sbin/pkgutil --payload-files "$PKG_PATH" | /usr/bin/grep '/\._' >/dev/null; then
   echo "Package still contains AppleDouble sidecar files." >&2
