@@ -28,6 +28,10 @@ export default function EmailPage() {
     window.open('https://outlook.office.com/mail/', '_blank', 'noopener,noreferrer');
   };
 
+  const openGmail = () => {
+    window.open('https://mail.google.com/mail/u/0/#inbox', '_blank', 'noopener,noreferrer');
+  };
+
   return (
     <div className="min-h-[calc(100vh-8rem)] w-full p-6 pt-2">
       <div className="mx-auto flex max-w-5xl items-start justify-center">
@@ -54,39 +58,60 @@ export default function EmailPage() {
           </div>
 
           <div className="border-t border-white/60 bg-white/30 p-6 backdrop-blur-2xl md:border-l md:border-t-0">
-            <div className="mx-auto flex h-full max-w-sm flex-col justify-center rounded-3xl border border-white/70 bg-white/55 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_18px_55px_rgba(15,23,42,0.08)] backdrop-blur-2xl">
-              <div className="mb-7 flex items-center gap-3">
-                <img
-                  src="https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg"
-                  className="h-8 w-8"
-                  alt="Microsoft"
-                />
-                <div>
-                  <p className="text-sm font-black text-slate-900">Microsoft 365</p>
-                  <p className="text-xs font-semibold text-slate-400">Official Outlook login</p>
+            <div className="mx-auto grid h-full max-w-sm content-center gap-4">
+              <div className="rounded-3xl border border-white/70 bg-white/55 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_18px_55px_rgba(15,23,42,0.08)] backdrop-blur-2xl">
+                <div className="mb-7 flex items-center gap-3">
+                  <img
+                    src="https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg"
+                    className="h-8 w-8"
+                    alt="Microsoft"
+                  />
+                  <div>
+                    <p className="text-sm font-black text-slate-900">Microsoft 365</p>
+                    <p className="text-xs font-semibold text-slate-400">Official Outlook login</p>
+                  </div>
                 </div>
+
+                <label className="block rounded-2xl border border-slate-200/80 bg-white/70 px-4 py-3 backdrop-blur-xl">
+                  <span className="mb-2 block text-xs font-black uppercase tracking-widest text-slate-400">School email</span>
+                  <input
+                    type="email"
+                    value={emailInput}
+                    onChange={(event) => setEmailInput(event.target.value)}
+                    placeholder="student@school.edu"
+                    className="w-full bg-transparent text-sm font-semibold text-slate-700 outline-none placeholder:text-slate-400"
+                  />
+                </label>
+
+                <button
+                  type="button"
+                  onClick={openOutlookMail}
+                  className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-black text-white shadow-lg shadow-slate-300"
+                >
+                  Open Outlook Email
+                  <ArrowRight className="h-4 w-4" />
+                </button>
               </div>
 
-              <label className="block rounded-2xl border border-slate-200/80 bg-white/70 px-4 py-3 backdrop-blur-xl">
-                <span className="mb-2 block text-xs font-black uppercase tracking-widest text-slate-400">School email</span>
-                <input
-                  type="email"
-                  value={emailInput}
-                  onChange={(event) => setEmailInput(event.target.value)}
-                  placeholder="student@school.edu"
-                  className="w-full bg-transparent text-sm font-semibold text-slate-700 outline-none placeholder:text-slate-400"
-                />
-              </label>
-
-              <button
-                type="button"
-                onClick={openOutlookMail}
-                className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-black text-white shadow-lg shadow-slate-300"
-              >
-                Open Outlook Email
-                <ArrowRight className="h-4 w-4" />
-              </button>
-
+              <div className="rounded-3xl border border-white/70 bg-white/55 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_18px_55px_rgba(15,23,42,0.08)] backdrop-blur-2xl">
+                <div className="mb-5 flex items-center gap-3">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-2xl border border-slate-200 bg-white text-xl font-black text-sky-600">
+                    G
+                  </span>
+                  <div>
+                    <p className="text-sm font-black text-slate-900">Gmail</p>
+                    <p className="text-xs font-semibold text-slate-400">Google mail login</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={openGmail}
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-900 shadow-lg shadow-slate-200/70"
+                >
+                  Open Gmail
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           </div>
         </div>

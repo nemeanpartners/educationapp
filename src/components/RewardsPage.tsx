@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { motion } from 'motion/react';
 import {
   Award,
@@ -8,11 +8,14 @@ import {
   CheckCircle2,
   Lock,
   Medal,
+  Plus,
+  Save,
   ShieldCheck,
   Star,
   Target,
   Trophy,
   Users,
+  X,
   Zap,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -37,6 +40,89 @@ interface PersonalAchievement {
   evidence: string;
   icon: any;
   highlight: string;
+}
+
+const achievementTypes: PersonalAchievement['type'][] = ['Certificate', 'Grade', 'Extracurricular', 'Leadership', 'Career'];
+
+function getHighlightForAchievementType(type: PersonalAchievement['type']) {
+  switch (type) {
+    case 'Grade':
+      return 'bg-emerald-50 border-emerald-200 text-emerald-700';
+    case 'Extracurricular':
+      return 'bg-sky-50 border-sky-200 text-sky-700';
+    case 'Leadership':
+      return 'bg-violet-50 border-violet-200 text-violet-700';
+    case 'Career':
+      return 'bg-indigo-50 border-indigo-200 text-indigo-700';
+    case 'Certificate':
+    default:
+      return 'bg-amber-50 border-amber-200 text-amber-700';
+  }
+}
+
+function getIconForAchievementType(type: PersonalAchievement['type']) {
+  switch (type) {
+    case 'Grade':
+      return Medal;
+    case 'Extracurricular':
+      return Users;
+    case 'Leadership':
+      return ShieldCheck;
+    case 'Career':
+      return Trophy;
+    case 'Certificate':
+    default:
+      return Award;
+  }
+}
+
+function createAchievementId() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `achievement-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function readCustomAchievements(storageKey: string): PersonalAchievement[] {
+  if (typeof window === 'undefined') return [];
+
+  try {
+    const raw = window.localStorage.getItem(storageKey);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed)
+      ? parsed
+          .map((item) => {
+            const type = achievementTypes.includes(item?.type) ? item.type : 'Certificate';
+            return {
+              id: String(item?.id || createAchievementId()),
+              title: String(item?.title || '').trim(),
+              description: String(item?.description || '').trim(),
+              type,
+              evidence: String(item?.evidence || '').trim(),
+              icon: getIconForAchievementType(type),
+              highlight: getHighlightForAchievementType(type),
+            };
+          })
+          .filter((item) => item.title)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function storeCustomAchievements(storageKey: string, achievements: PersonalAchievement[]) {
+  if (typeof window === 'undefined') return;
+
+  try {
+    window.localStorage.setItem(
+      storageKey,
+      JSON.stringify(
+        achievements.map(({ icon: _icon, highlight: _highlight, ...achievement }) => achievement),
+      ),
+    );
+  } catch {
+    // The achievement still appears for the current session if storage fails.
+  }
 }
 
 const appAchievements: Achievement[] = [
@@ -158,7 +244,55 @@ export default function RewardsPage() {
   const isUniversityPortal = detectStudentPortalFromPath(location.pathname) === 'university';
   const [activeCategory, setActiveCategory] = useState('All');
   const { isPhone } = useResponsiveDevice();
-  const featuredAchievements = isUniversityPortal ? universityAchievements : personalAchievements;
+  const baseAchievements = isUniversityPortal ? universityAchievements : personalAchievements;
+  const customStorageKey = isUniversityPortal ? 'edurev-custom-achievements-university' : 'edurev-custom-achievements-school';
+  const [customAchievements, setCustomAchievements] = useState<PersonalAchievement[]>(() => readCustomAchievements(customStorageKey));
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [achievementForm, setAchievementForm] = useState({
+    title: '',
+    type: 'Certificate' as PersonalAchievement['type'],
+    evidence: '',
+    description: '',
+  });
+  const featuredAchievements = useMemo(
+    () => [...customAchievements, ...baseAchievements],
+    [baseAchievements, customAchievements],
+  );
+
+  useEffect(() => {
+    setCustomAchievements(readCustomAchievements(customStorageKey));
+    setIsAddOpen(false);
+  }, [customStorageKey]);
+
+  const addCustomAchievement = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const title = achievementForm.title.trim();
+    if (!title) return;
+
+    const type = achievementForm.type;
+    const nextAchievement: PersonalAchievement = {
+      id: createAchievementId(),
+      title,
+      description: achievementForm.description.trim() || 'Student-added achievement saved for this profile.',
+      type,
+      evidence: achievementForm.evidence.trim() || 'Added by student',
+      icon: getIconForAchievementType(type),
+      highlight: getHighlightForAchievementType(type),
+    };
+
+    setCustomAchievements((current) => {
+      const next = [nextAchievement, ...current];
+      storeCustomAchievements(customStorageKey, next);
+      return next;
+    });
+    setAchievementForm({
+      title: '',
+      type: 'Certificate',
+      evidence: '',
+      description: '',
+    });
+    setIsAddOpen(false);
+  };
 
   const filteredAppAchievements = useMemo(
     () => activeCategory === 'All'
@@ -209,7 +343,73 @@ export default function RewardsPage() {
                 : 'Keep personal achievements separate from app badges so important academic results and real-world accomplishments are easy to find.'}
             </p>
           </div>
+          <button
+            type="button"
+            onClick={() => setIsAddOpen((current) => !current)}
+            className="relative z-10 inline-flex items-center justify-center gap-2 rounded-full bg-zinc-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-zinc-300 transition hover:bg-zinc-800"
+          >
+            {isAddOpen ? <X size={17} /> : <Plus size={17} />}
+            {isAddOpen ? 'Close' : 'Add achievement'}
+          </button>
         </div>
+
+        {isAddOpen ? (
+          <form onSubmit={addCustomAchievement} className={cn(GLASS_CARD, 'relative z-10 rounded-[30px] p-5')}>
+            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(155deg,rgba(255,255,255,0.66),rgba(255,255,255,0.22)_48%,rgba(255,255,255,0.1))]" />
+            <div className="relative z-10 grid gap-4 md:grid-cols-[1.15fr_0.6fr]">
+              <label className="block">
+                <span className="text-xs font-black uppercase tracking-[0.18em] text-zinc-400">Achievement title</span>
+                <input
+                  value={achievementForm.title}
+                  onChange={(event) => setAchievementForm((current) => ({ ...current, title: event.target.value }))}
+                  placeholder="Example: Engineering design award"
+                  className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white/80 px-4 py-3 text-sm font-bold text-zinc-900 outline-none ring-violet-500/20 focus:ring-4"
+                />
+              </label>
+              <label className="block">
+                <span className="text-xs font-black uppercase tracking-[0.18em] text-zinc-400">Type</span>
+                <select
+                  value={achievementForm.type}
+                  onChange={(event) => setAchievementForm((current) => ({ ...current, type: event.target.value as PersonalAchievement['type'] }))}
+                  className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white/80 px-4 py-3 text-sm font-bold text-zinc-900 outline-none ring-violet-500/20 focus:ring-4"
+                >
+                  {achievementTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block">
+                <span className="text-xs font-black uppercase tracking-[0.18em] text-zinc-400">Evidence</span>
+                <input
+                  value={achievementForm.evidence}
+                  onChange={(event) => setAchievementForm((current) => ({ ...current, evidence: event.target.value }))}
+                  placeholder="Certificate, placement offer, society role, result, or note"
+                  className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white/80 px-4 py-3 text-sm font-bold text-zinc-900 outline-none ring-violet-500/20 focus:ring-4"
+                />
+              </label>
+              <label className="block">
+                <span className="text-xs font-black uppercase tracking-[0.18em] text-zinc-400">Details</span>
+                <input
+                  value={achievementForm.description}
+                  onChange={(event) => setAchievementForm((current) => ({ ...current, description: event.target.value }))}
+                  placeholder="Short description"
+                  className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white/80 px-4 py-3 text-sm font-bold text-zinc-900 outline-none ring-violet-500/20 focus:ring-4"
+                />
+              </label>
+            </div>
+            <div className="relative z-10 mt-4 flex justify-end">
+              <button
+                type="submit"
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-violet-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-violet-200 transition hover:bg-violet-700"
+              >
+                <Save size={17} />
+                Save achievement
+              </button>
+            </div>
+          </form>
+        ) : null}
 
         <div className={cn('grid gap-4', isPhone ? 'grid-cols-1' : 'grid-cols-3')}>
           <div className={cn(GLASS_CARD, 'rounded-[28px] p-5')}>

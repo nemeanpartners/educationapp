@@ -527,6 +527,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         }
         return nil
     }
+
+    @available(macOS 12.0, *)
+    func webView(
+        _ webView: WKWebView,
+        requestMediaCapturePermissionFor origin: WKSecurityOrigin,
+        initiatedByFrame frame: WKFrameInfo,
+        type: WKMediaCaptureType,
+        decisionHandler: @escaping (WKPermissionDecision) -> Void
+    ) {
+        switch type {
+        case .camera, .microphone, .cameraAndMicrophone:
+            decisionHandler(.grant)
+        @unknown default:
+            decisionHandler(.prompt)
+        }
+    }
 }
 
 let delegate = AppDelegate()

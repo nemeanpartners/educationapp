@@ -398,14 +398,14 @@ function UniversityBeyondPage({ profile }: { profile: UserProfile | null }) {
               </p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50/90 px-5 py-4">
+            <div className="grid w-full min-w-0 gap-3 sm:grid-cols-2 xl:w-[min(34rem,100%)]">
+              <div className="min-w-0 rounded-[1.5rem] border border-slate-200 bg-slate-50/90 px-5 py-4">
                 <p className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">Degree</p>
-                <p className="mt-2 text-lg font-black text-slate-900">{degree}</p>
+                <p className="mt-2 break-words text-base font-black leading-snug text-slate-900">{degree}</p>
               </div>
-              <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50/90 px-5 py-4">
+              <div className="min-w-0 rounded-[1.5rem] border border-slate-200 bg-slate-50/90 px-5 py-4">
                 <p className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">Institution</p>
-                <p className="mt-2 text-lg font-black text-slate-900">{institution}</p>
+                <p className="mt-2 break-words text-base font-black leading-snug text-slate-900">{institution}</p>
               </div>
             </div>
           </div>
@@ -721,9 +721,9 @@ function DoorList({ title, items }: { title: string; items: string[] }) {
 
 function AcademicSetupCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50/85 p-5">
+    <div className="min-w-0 rounded-[1.5rem] border border-slate-200 bg-slate-50/85 p-5">
       <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">{label}</p>
-      <p className="mt-3 text-base font-black leading-7 text-slate-900">{value}</p>
+      <p className="mt-3 break-words text-base font-black leading-7 text-slate-900">{value}</p>
     </div>
   );
 }

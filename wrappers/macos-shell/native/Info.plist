@@ -52,6 +52,10 @@
 	</dict>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>EducationRev uses the camera only when you choose to join an in-app study meeting with video.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>EducationRev uses the microphone only when you choose to speak in an in-app study meeting.</string>
 	<key>NSSupportsAutomaticGraphicsSwitching</key>
 	<true/>
 </dict>
