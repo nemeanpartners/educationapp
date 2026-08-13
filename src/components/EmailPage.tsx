@@ -95,18 +95,22 @@ export default function EmailPage() {
 
               <div className="rounded-3xl border border-white/70 bg-white/55 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_18px_55px_rgba(15,23,42,0.08)] backdrop-blur-2xl">
                 <div className="mb-5 flex items-center gap-3">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-2xl border border-slate-200 bg-white text-xl font-black text-sky-600">
-                    G
+                  <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <img
+                      src="https://upload.wikimedia.org/wikipedia/commons/7/7e/Gmail_icon_%282020%29.svg"
+                      className="h-6 w-6"
+                      alt="Gmail"
+                    />
                   </span>
                   <div>
                     <p className="text-sm font-black text-slate-900">Gmail</p>
-                    <p className="text-xs font-semibold text-slate-400">Google mail login</p>
+                    <p className="text-xs font-semibold text-slate-400">Google Mail login</p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={openGmail}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-900 shadow-lg shadow-slate-200/70"
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-900 shadow-lg shadow-slate-200/70 transition hover:border-red-200 hover:bg-red-50/30"
                 >
                   Open Gmail
                   <ArrowRight className="h-4 w-4" />
