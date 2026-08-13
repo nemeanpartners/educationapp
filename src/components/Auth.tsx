@@ -48,6 +48,23 @@ function openDesktopAuthInBrowser(url: string) {
   window.open(url, '_blank', 'noopener,noreferrer');
 }
 
+function createDesktopAuthState() {
+  if (typeof window === 'undefined') {
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  }
+
+  if (typeof window.crypto?.randomUUID === 'function') {
+    return window.crypto.randomUUID();
+  }
+
+  if (window.crypto?.getRandomValues) {
+    const values = window.crypto.getRandomValues(new Uint32Array(2));
+    return `${Date.now().toString(36)}-${Array.from(values).map((value) => value.toString(36)).join('')}`;
+  }
+
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
+
 function normalizeEmail(value: string) {
   return value.trim().toLowerCase();
 }
@@ -218,7 +235,7 @@ export default function Auth() {
             : provider === microsoftProvider
               ? 'microsoft'
               : 'google';
-        const desktopAuthUrl = `${CANONICAL_AUTH_ORIGIN}/auth/desktop-browser?provider=${providerName}&portal=${selectedPortal}&auto=1`;
+        const desktopAuthUrl = `${CANONICAL_AUTH_ORIGIN}/auth/desktop-browser?provider=${providerName}&portal=${selectedPortal}&auto=1&state=${encodeURIComponent(createDesktopAuthState())}`;
         openDesktopAuthInBrowser(desktopAuthUrl);
         return;
       }
