@@ -11,6 +11,7 @@ import {
   getUniversityJitsiProvisioningMessage,
   getMeetingCountdown,
   isUniversityJitsiProvisioned,
+  loadUniversityMeetingConfig,
   writeActiveUniversityMeeting,
   type MeetingChecklistItem,
   type UniversityMeeting,
@@ -116,7 +117,7 @@ function normalizeTeamMember(member: Partial<TeamMember> | string | null | undef
 export default function TeamworkPage() {
   const navigate = useNavigate();
   const { isPhone } = useResponsiveDevice();
-  const jitsiProvisioned = isUniversityJitsiProvisioned();
+  const [jitsiProvisioned, setJitsiProvisioned] = useState(() => isUniversityJitsiProvisioned());
   const [projects, setProjects] = useState<TeamworkProject[]>([]);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [memberInput, setMemberInput] = useState('');
@@ -142,6 +143,20 @@ export default function TeamworkPage() {
   const [inviteFeedback, setInviteFeedback] = useState('');
   const [chatMessages, setChatMessages] = useState<TeamworkMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    loadUniversityMeetingConfig().then(() => {
+      if (!cancelled) {
+        const available = isUniversityJitsiProvisioned();
+        setJitsiProvisioned(available);
+        setMeetingProvider((current) => (available ? current : current === 'jitsi' ? 'zoom' : current));
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const user = auth.currentUser;
@@ -755,29 +770,13 @@ export default function TeamworkPage() {
           </div>
           <div className="flex flex-wrap gap-3">
             {jitsiProvisioned ? (
-              <>
-                <button
-                  onClick={() => openScheduleMeetingModal('instant')}
-                  className="inline-flex items-center justify-center gap-2 rounded-full border border-zinc-200 bg-white px-5 py-3 text-sm font-black text-zinc-700 shadow-sm transition hover:border-zinc-300"
-                >
-                  <PlayCircle size={16} />
-                  Start in-app Jitsi room
-                </button>
-                <button
-                  onClick={openZoomOnline}
-                  className="inline-flex items-center justify-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-5 py-3 text-sm font-black text-blue-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-100"
-                >
-                  Open Zoom
-                  <ExternalLink size={16} />
-                </button>
-                <button
-                  onClick={() => openScheduleMeetingModal('schedule')}
-                  className="inline-flex items-center justify-center gap-2 rounded-full border border-zinc-200 bg-white px-5 py-3 text-sm font-black text-zinc-700 shadow-sm transition hover:border-zinc-300"
-                >
-                  <CalendarClock size={16} />
-                  Schedule in-app Jitsi room
-                </button>
-              </>
+              <button
+                onClick={() => openScheduleMeetingModal('instant')}
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-zinc-200 bg-white px-5 py-3 text-sm font-black text-zinc-700 shadow-sm transition hover:border-zinc-300"
+              >
+                <PlayCircle size={16} />
+                Start in-app Jitsi room
+              </button>
             ) : (
               <button
                 onClick={() => navigate('/uni/meeting-room-uni')}
@@ -787,6 +786,22 @@ export default function TeamworkPage() {
                 In-app meeting unavailable
               </button>
             )}
+            <button
+              onClick={openZoomOnline}
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-5 py-3 text-sm font-black text-blue-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-100"
+            >
+              Open Zoom
+              <ExternalLink size={16} />
+            </button>
+            {jitsiProvisioned ? (
+              <button
+                onClick={() => openScheduleMeetingModal('schedule')}
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-zinc-200 bg-white px-5 py-3 text-sm font-black text-zinc-700 shadow-sm transition hover:border-zinc-300"
+              >
+                <CalendarClock size={16} />
+                Schedule in-app Jitsi room
+              </button>
+            ) : null}
             <button
               onClick={createProject}
               className="inline-flex items-center justify-center gap-2 rounded-full bg-zinc-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-zinc-200 transition hover:bg-zinc-800"
@@ -931,34 +946,34 @@ export default function TeamworkPage() {
                 </p>
                 <div className="mt-4 grid gap-2.5">
                   {jitsiProvisioned ? (
-                    <>
-                      <button
-                        onClick={() => openScheduleMeetingModal('instant')}
-                        className="inline-flex items-center justify-between rounded-[16px] border border-zinc-200 bg-white px-4 py-3 text-sm font-black text-zinc-700 transition hover:border-zinc-300"
-                      >
-                        Start in-app Jitsi room
-                        <PlayCircle size={14} />
-                      </button>
-                      <button
-                        onClick={openZoomOnline}
-                        className="inline-flex items-center justify-between rounded-[16px] border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-black text-blue-700 transition hover:border-blue-200 hover:bg-blue-100"
-                      >
-                        Open Zoom
-                        <ExternalLink size={14} />
-                      </button>
-                      <button
-                        onClick={() => openScheduleMeetingModal('schedule')}
-                        className="inline-flex items-center justify-between rounded-[16px] border border-zinc-200 bg-white px-4 py-3 text-sm font-black text-zinc-700 transition hover:border-zinc-300"
-                      >
-                        Schedule in-app Jitsi room
-                        <CalendarClock size={14} />
-                      </button>
-                    </>
+                    <button
+                      onClick={() => openScheduleMeetingModal('instant')}
+                      className="inline-flex items-center justify-between rounded-[16px] border border-zinc-200 bg-white px-4 py-3 text-sm font-black text-zinc-700 transition hover:border-zinc-300"
+                    >
+                      Start in-app Jitsi room
+                      <PlayCircle size={14} />
+                    </button>
                   ) : (
                     <div className="rounded-[16px] border border-amber-200 bg-amber-50 px-4 py-4 text-sm font-semibold leading-7 text-amber-900">
                       {getUniversityJitsiProvisioningMessage()}
                     </div>
                   )}
+                  <button
+                    onClick={openZoomOnline}
+                    className="inline-flex items-center justify-between rounded-[16px] border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-black text-blue-700 transition hover:border-blue-200 hover:bg-blue-100"
+                  >
+                    Open Zoom
+                    <ExternalLink size={14} />
+                  </button>
+                  {jitsiProvisioned ? (
+                    <button
+                      onClick={() => openScheduleMeetingModal('schedule')}
+                      className="inline-flex items-center justify-between rounded-[16px] border border-zinc-200 bg-white px-4 py-3 text-sm font-black text-zinc-700 transition hover:border-zinc-300"
+                    >
+                      Schedule in-app Jitsi room
+                      <CalendarClock size={14} />
+                    </button>
+                  ) : null}
                   <button
                     onClick={() => navigate('/uni/meeting-room-uni')}
                     className="inline-flex items-center justify-between rounded-[16px] border border-zinc-200 bg-white px-4 py-3 text-sm font-black text-zinc-700 transition hover:border-zinc-300"

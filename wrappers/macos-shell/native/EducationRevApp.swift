@@ -65,7 +65,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     }
 
     @objc private func openInBrowser() {
-        NSWorkspace.shared.open(appURL)
+        openExternalURL(appURL)
     }
 
     @objc private func handleURLEvent(_ event: NSAppleEventDescriptor, withReplyEvent replyEvent: NSAppleEventDescriptor) {
@@ -89,6 +89,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
             try {
               window.localStorage.setItem('edurev-desktop-shell', '1');
               window.localStorage.setItem('edurev-wrapper-origin', 'native-macos');
+            } catch (error) {}
+            try {
+              if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations()
+                  .then(function(registrations) {
+                    registrations.forEach(function(registration) { registration.unregister(); });
+                  })
+                  .catch(function() {});
+              }
             } catch (error) {}
             """,
             injectionTime: .atDocumentStart,
@@ -175,7 +184,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     }
 
     @objc private func openSupport() {
-        NSWorkspace.shared.open(URL(string: "https://www.educationrevolution.qld.one/support")!)
+        openExternalURL(URL(string: "https://www.educationrevolution.qld.one/support")!)
+    }
+
+    private func openExternalURL(_ url: URL) {
+        let chromeBundleId = "com.google.Chrome"
+        if
+            let chromeURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: chromeBundleId),
+            url.scheme == "http" || url.scheme == "https"
+        {
+            let configuration = NSWorkspace.OpenConfiguration()
+            NSWorkspace.shared.open([url], withApplicationAt: chromeURL, configuration: configuration) { _, error in
+                if error != nil {
+                    NSWorkspace.shared.open(url)
+                }
+            }
+            return
+        }
+
+        NSWorkspace.shared.open(url)
     }
 
     private func shouldOpenExternally(_ url: URL) -> Bool {
@@ -201,7 +228,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
 
     private func openDeepLink(_ url: URL) {
         guard url.scheme == "edurevolutionai", url.host == "auth-complete" else {
-            NSWorkspace.shared.open(url)
+            openExternalURL(url)
             return
         }
 
@@ -437,7 +464,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         }
 
         if shouldOpenExternally(url) {
-            NSWorkspace.shared.open(url)
+            openExternalURL(url)
             decisionHandler(.cancel)
             return
         }
@@ -454,14 +481,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
             return
         }
 
-        NSWorkspace.shared.open(url)
+        openExternalURL(url)
         decisionHandler(.cancel)
     }
 
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
         if navigationAction.targetFrame == nil, let url = navigationAction.request.url {
             if shouldOpenExternally(url) {
-                NSWorkspace.shared.open(url)
+                openExternalURL(url)
                 return nil
             }
 

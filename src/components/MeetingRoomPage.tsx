@@ -9,6 +9,7 @@ import {
   buildJitsiMeetingUrl,
   getUniversityJitsiProvisioningMessage,
   isUniversityJitsiProvisioned,
+  loadUniversityMeetingConfig,
   clearActiveUniversityMeeting,
   getMeetingCountdown,
   readActiveUniversityMeeting,
@@ -35,7 +36,7 @@ type FlattenedMeeting = UniversityMeeting & {
 
 export default function MeetingRoomPage() {
   const currentUser = auth.currentUser;
-  const jitsiProvisioned = isUniversityJitsiProvisioned();
+  const [jitsiProvisioned, setJitsiProvisioned] = useState(() => isUniversityJitsiProvisioned());
   const [projects, setProjects] = useState<TeamworkProjectMeetingRoom[]>([]);
   const [activeMeeting, setActiveMeeting] = useState<ActiveUniversityMeeting | null>(() => readActiveUniversityMeeting());
   const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null);
@@ -47,6 +48,18 @@ export default function MeetingRoomPage() {
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
   useEffect(() => subscribeActiveUniversityMeeting(setActiveMeeting), []);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadUniversityMeetingConfig().then(() => {
+      if (!cancelled) {
+        setJitsiProvisioned(isUniversityJitsiProvisioned());
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const user = auth.currentUser;

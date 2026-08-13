@@ -4,8 +4,10 @@ import {
   buildUniversityJitsiRoomPath,
   getUniversityJitsiDomain,
   getUniversityJitsiExternalApiUrl,
+  getUniversityJitsiJwtEndpoint,
   getUniversityJitsiProvisioningMessage,
   isUniversityJitsiProvisioned,
+  loadUniversityMeetingConfig,
 } from '../lib/university-meetings';
 
 declare global {
@@ -66,10 +68,22 @@ export default function EmbeddedJitsiRoom({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const apiRef = useRef<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isProvisioned, setIsProvisioned] = useState(() => isUniversityJitsiProvisioned());
 
   const safeRoomName = useMemo(() => roomName.trim(), [roomName]);
   const fullRoomPath = useMemo(() => buildUniversityJitsiRoomPath(safeRoomName), [safeRoomName]);
-  const isProvisioned = useMemo(() => isUniversityJitsiProvisioned(), []);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadUniversityMeetingConfig().then(() => {
+      if (!cancelled) {
+        setIsProvisioned(isUniversityJitsiProvisioned());
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -88,7 +102,7 @@ export default function EmbeddedJitsiRoom({
           throw new Error('You need to be signed in to open the EducationRev meeting room.');
         }
 
-        const jwtResponse = await fetch('/api/jaas/token', {
+        const jwtResponse = await fetch(getUniversityJitsiJwtEndpoint(), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

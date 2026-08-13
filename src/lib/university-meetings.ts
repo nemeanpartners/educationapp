@@ -58,32 +58,113 @@ export type ActiveUniversityMeeting = {
 
 const ACTIVE_UNI_MEETING_KEY = 'edurev-uni-active-meeting';
 const ACTIVE_UNI_MEETING_EVENT = 'edurev-uni-active-meeting-changed';
+const UNIVERSITY_MEETING_CONFIG_ENDPOINT = '/api/university-meetings/config';
+const DEFAULT_UNI_JITSI_APP_ID = 'vpaas-magic-cookie-1cf26789542342928b6bf85544abb61a';
+const DEFAULT_UNI_JITSI_DOMAIN = '8x8.vc';
+const DEFAULT_UNI_JITSI_ROOM_PREFIX = 'edurev';
+const DEFAULT_UNI_JITSI_JWT_ENDPOINT = '/api/jaas/token';
+
+export type UniversityMeetingRuntimeConfig = {
+  appId: string;
+  domain: string;
+  externalApiUrl: string;
+  roomPrefix: string;
+  jwtEndpoint: string;
+  provisioned?: boolean;
+};
+
+declare global {
+  interface Window {
+    __educationRevUniversityMeetingConfig?: UniversityMeetingRuntimeConfig;
+    __educationRevUniversityMeetingConfigPromise?: Promise<UniversityMeetingRuntimeConfig>;
+  }
+}
+
+function envValue(key: string) {
+  const meta = import.meta as unknown as { env?: Record<string, string | undefined> };
+  return String(meta.env?.[key] || '').trim();
+}
+
+function normalizeMeetingConfig(config: Partial<UniversityMeetingRuntimeConfig> = {}): UniversityMeetingRuntimeConfig {
+  const appId = String(config.appId || envValue('VITE_UNI_JITSI_APP_ID') || DEFAULT_UNI_JITSI_APP_ID).trim();
+  const domain = String(config.domain || envValue('VITE_UNI_JITSI_DOMAIN') || DEFAULT_UNI_JITSI_DOMAIN).trim();
+  const externalApiUrl = String(
+    config.externalApiUrl ||
+      envValue('VITE_UNI_JITSI_EXTERNAL_API_URL') ||
+      (domain && appId ? `https://${domain}/${appId}/external_api.js` : ''),
+  ).trim();
+  const roomPrefix = String(config.roomPrefix || envValue('VITE_UNI_JITSI_ROOM_PREFIX') || DEFAULT_UNI_JITSI_ROOM_PREFIX).trim();
+  const jwtEndpoint = String(config.jwtEndpoint || envValue('VITE_UNI_JITSI_JWT_ENDPOINT') || DEFAULT_UNI_JITSI_JWT_ENDPOINT).trim();
+
+  return {
+    appId,
+    domain,
+    externalApiUrl,
+    roomPrefix,
+    jwtEndpoint,
+    provisioned:
+      typeof config.provisioned === 'boolean'
+        ? config.provisioned
+        : Boolean(appId && domain && externalApiUrl && roomPrefix && jwtEndpoint),
+  };
+}
+
+function getMeetingConfig() {
+  if (typeof window !== 'undefined' && window.__educationRevUniversityMeetingConfig) {
+    return normalizeMeetingConfig(window.__educationRevUniversityMeetingConfig);
+  }
+  return normalizeMeetingConfig();
+}
+
+export async function loadUniversityMeetingConfig() {
+  if (typeof window === 'undefined') {
+    return normalizeMeetingConfig();
+  }
+
+  if (!window.__educationRevUniversityMeetingConfigPromise) {
+    window.__educationRevUniversityMeetingConfigPromise = fetch(UNIVERSITY_MEETING_CONFIG_ENDPOINT, {
+      cache: 'no-store',
+      credentials: 'same-origin',
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error('Could not load university meeting configuration.');
+        }
+        return response.json();
+      })
+      .then((payload) => {
+        const config = normalizeMeetingConfig(payload);
+        window.__educationRevUniversityMeetingConfig = config;
+        return config;
+      })
+      .catch(() => {
+        const config = normalizeMeetingConfig();
+        window.__educationRevUniversityMeetingConfig = config;
+        return config;
+      });
+  }
+
+  return window.__educationRevUniversityMeetingConfigPromise;
+}
 
 export function getUniversityJitsiAppId() {
-  return (import.meta.env.VITE_UNI_JITSI_APP_ID || '').trim();
+  return getMeetingConfig().appId;
 }
 
 export function getUniversityJitsiDomain() {
-  return (import.meta.env.VITE_UNI_JITSI_DOMAIN || '').trim();
+  return getMeetingConfig().domain;
 }
 
 export function getUniversityJitsiExternalApiUrl() {
-  const explicit = (import.meta.env.VITE_UNI_JITSI_EXTERNAL_API_URL || '').trim();
-  if (explicit) {
-    return explicit;
-  }
-  const domain = getUniversityJitsiDomain();
-  const appId = getUniversityJitsiAppId();
-  if (!domain || !appId) return '';
-  return `https://${domain}/${appId}/external_api.js`;
+  return getMeetingConfig().externalApiUrl;
 }
 
 export function getUniversityJitsiRoomPrefix() {
-  return (import.meta.env.VITE_UNI_JITSI_ROOM_PREFIX || '').trim();
+  return getMeetingConfig().roomPrefix;
 }
 
 export function getUniversityJitsiJwtEndpoint() {
-  return (import.meta.env.VITE_UNI_JITSI_JWT_ENDPOINT || '').trim();
+  return getMeetingConfig().jwtEndpoint;
 }
 
 export function buildUniversityJitsiRoomPath(rawRoomName: string) {
@@ -94,13 +175,8 @@ export function buildUniversityJitsiRoomPath(rawRoomName: string) {
 }
 
 export function isUniversityJitsiProvisioned() {
-  const appId = getUniversityJitsiAppId();
-  const domain = getUniversityJitsiDomain();
-  const externalApiUrl = getUniversityJitsiExternalApiUrl();
-  const roomPrefix = getUniversityJitsiRoomPrefix();
-  const jwtEndpoint = getUniversityJitsiJwtEndpoint();
-
-  return Boolean(appId && domain && externalApiUrl && roomPrefix && jwtEndpoint);
+  const config = getMeetingConfig();
+  return config.provisioned ?? Boolean(config.appId && config.domain && config.externalApiUrl && config.roomPrefix && config.jwtEndpoint);
 }
 
 export function getUniversityJitsiProvisioningMessage() {
