@@ -83,6 +83,7 @@ import TeamworkPage from './components/TeamworkPage';
 import UniversityReportBuilderPage from './components/UniversityReportBuilderPage';
 import MeetingRoomPage from './components/MeetingRoomPage';
 import LandingPage from './components/LandingPage';
+import PrivacyPolicyPage from './components/PrivacyPolicyPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { detectStudentPortalFromPath, getStoredStudentPortal, setStoredStudentPortal, stripStudentPortalPrefix, studentPortalHome, studentPortalPath, type StudentPortalType } from './lib/portal';
 import { getAppReviewSeedFlashcardSets, getAppReviewSeedQuizzes } from './lib/study-presets';
@@ -943,6 +944,8 @@ export default function App() {
           <Router>
             <Routes>
               <Route path="/landingpage" element={<LandingPage />} />
+              <Route path="/landing" element={<LandingPage />} />
+              <Route path="/privacy" element={<PrivacyPolicyPage />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/auth/desktop-browser" element={<DesktopBrowserAuthPage />} />
               <Route path="/auth/desktop-complete" element={<DesktopCompleteAuthPage />} />
@@ -968,6 +971,8 @@ export default function App() {
         <Routes>
           <Route path="/auth" element={(!user || forceDeletedAuthScreen || forcePortalChoiceScreen) ? <Auth /> : <AuthSuccessRedirect />} />
           <Route path="/landingpage" element={<LandingPage />} />
+          <Route path="/landing" element={<LandingPage />} />
+          <Route path="/privacy" element={<PrivacyPolicyPage />} />
           <Route path="/auth/desktop-browser" element={<DesktopBrowserAuthPage />} />
           <Route path="/auth/desktop-complete" element={<DesktopCompleteAuthPage />} />
           <Route
