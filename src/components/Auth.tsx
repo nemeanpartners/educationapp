@@ -22,6 +22,7 @@ import { APP_BRAND_NAME } from '../lib/branding';
 import type { UserProfile } from '../types';
 
 type AuthMode = 'signin' | 'signup';
+const CANONICAL_AUTH_ORIGIN = 'https://www.educationrevolution.qld.one';
 
 function isMacDesktopWrapper() {
   if (typeof window === 'undefined') return false;
@@ -202,7 +203,7 @@ export default function Auth() {
           : provider === microsoftProvider
             ? 'microsoft'
             : 'google';
-        const desktopAuthUrl = `${window.location.origin}/auth/desktop-browser?provider=${providerName}&portal=${selectedPortal}`;
+        const desktopAuthUrl = `${CANONICAL_AUTH_ORIGIN}/auth/desktop-browser?provider=${providerName}&portal=${selectedPortal}`;
         window.open(desktopAuthUrl, '_blank', 'noopener,noreferrer');
         return;
       }
