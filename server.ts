@@ -76,7 +76,7 @@ app.use(express.static(distPath, {
 
 const firebaseAuthHelperOrigin =
   process.env.FIREBASE_AUTH_HELPER_ORIGIN ||
-  "https://educationapp26.web.app";
+  "https://studio-7677496479-873b4.firebaseapp.com";
 
 app.get("/__/auth/*", async (req, res) => {
   try {

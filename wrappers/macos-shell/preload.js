@@ -180,6 +180,9 @@ contextBridge.exposeInMainWorld("eduRevShell", {
   closeGooglePage() {
     ipcRenderer.send("google-page:close");
   },
+  openExternalAuth(url) {
+    ipcRenderer.send("auth:open-external", url);
+  },
   reloadApp() {
     ipcRenderer.send("app:reload");
   },

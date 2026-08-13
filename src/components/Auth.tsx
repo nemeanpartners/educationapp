@@ -23,6 +23,9 @@ import type { UserProfile } from '../types';
 
 type AuthMode = 'signin' | 'signup';
 const CANONICAL_AUTH_ORIGIN = 'https://www.educationrevolution.qld.one';
+type DesktopAuthShellBridge = {
+  openExternalAuth?: (url: string) => void;
+};
 
 function isMacDesktopWrapper() {
   if (typeof window === 'undefined') return false;
@@ -31,6 +34,18 @@ function isMacDesktopWrapper() {
   return /Electron/i.test(window.navigator.userAgent || '')
     || window.localStorage.getItem('edurev-desktop-shell') === '1'
     || window.localStorage.getItem('edurev-wrapper-origin') === 'native-macos';
+}
+
+function openDesktopAuthInBrowser(url: string) {
+  if (typeof window === 'undefined') return;
+
+  const shell = window.eduRevShell as (typeof window.eduRevShell & DesktopAuthShellBridge) | undefined;
+  if (shell?.openExternalAuth) {
+    shell.openExternalAuth(url);
+    return;
+  }
+
+  window.open(url, '_blank', 'noopener,noreferrer');
 }
 
 function normalizeEmail(value: string) {
@@ -200,11 +215,11 @@ export default function Auth() {
       if (usingDesktopBrowserFlow) {
         const providerName = provider === appleProvider
           ? 'apple'
-          : provider === microsoftProvider
-            ? 'microsoft'
-            : 'google';
-        const desktopAuthUrl = `${CANONICAL_AUTH_ORIGIN}/auth/desktop-browser?provider=${providerName}&portal=${selectedPortal}`;
-        window.open(desktopAuthUrl, '_blank', 'noopener,noreferrer');
+            : provider === microsoftProvider
+              ? 'microsoft'
+              : 'google';
+        const desktopAuthUrl = `${CANONICAL_AUTH_ORIGIN}/auth/desktop-browser?provider=${providerName}&portal=${selectedPortal}&auto=1`;
+        openDesktopAuthInBrowser(desktopAuthUrl);
         return;
       }
 

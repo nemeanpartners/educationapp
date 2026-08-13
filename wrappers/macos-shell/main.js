@@ -38,6 +38,16 @@ function openExternalUrl(url) {
   shell.openExternal(url);
 }
 
+function openExternalAuthUrl(url) {
+  try {
+    const parsed = new URL(url);
+    const normalizedUrl = parsed.toString();
+    if (isDesktopBrowserAuthUrl(normalizedUrl) || isAllowedAuthPopupUrl(normalizedUrl)) {
+      openExternalUrl(normalizedUrl);
+    }
+  } catch {}
+}
+
 function escapeHtml(value) {
   return String(value)
     .replace(/&/g, "&amp;")
@@ -911,8 +921,27 @@ app.whenReady().then(() => {
   }
 
   app.on("web-contents-created", (_event, contents) => {
+    contents.setWindowOpenHandler(({ url }) => {
+      if (isDesktopBrowserAuthUrl(url) || isAllowedAuthPopupUrl(url)) {
+        openExternalUrl(url);
+        return { action: "deny" };
+      }
+
+      if (!isInternalWrapperUrl(url) || isMicrosoftOfficeInAppUrl(url) || isGoogleInAppUrl(url)) {
+        openExternalUrl(url);
+        return { action: "deny" };
+      }
+
+      return { action: "allow" };
+    });
+
     contents.on("will-navigate", (event, url) => {
       const isEmbeddedGoogleContents = embeddedGoogleView && contents.id === embeddedGoogleView.webContents.id;
+      if (isDesktopBrowserAuthUrl(url)) {
+        event.preventDefault();
+        openExternalUrl(url);
+        return;
+      }
       if (isInternalWrapperUrl(url) || isMicrosoftOfficeInAppUrl(url) || isGoogleInAppUrl(url) || isEmbeddedGoogleContents) {
         return;
       }
@@ -947,6 +976,11 @@ app.whenReady().then(() => {
 
   ipcMain.on("google-page:close", () => {
     closeEmbeddedGoogleView();
+  });
+
+  ipcMain.on("auth:open-external", (_event, url) => {
+    if (typeof url !== "string") return;
+    openExternalAuthUrl(url);
   });
 
   ipcMain.on("app:reload", () => {

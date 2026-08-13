@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   GoogleAuthProvider,
   OAuthProvider,
   browserLocalPersistence,
+  getRedirectResult,
   setPersistence,
   signInWithCredential,
-  signInWithPopup,
+  signInWithRedirect,
   type UserCredential,
 } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
@@ -70,32 +71,76 @@ function buildAppReturnUrl(provider: SupportedProvider, portal: StudentPortalTyp
 export function DesktopBrowserAuthPage() {
   const [status, setStatus] = useState<'ready' | 'working' | 'returning' | 'error'>('ready');
   const [message, setMessage] = useState('Choose continue below to sign in with your saved browser account list.');
+  const autoStartedRef = useRef(false);
 
   const searchParams = useMemo(() => new URLSearchParams(window.location.search), []);
   const provider = readProvider(searchParams.get('provider'));
   const portal = readPortal(searchParams.get('portal'));
+  const autoStart = searchParams.get('auto') === '1';
 
   useEffect(() => {
     setStoredStudentPortal(portal);
   }, [portal, provider]);
 
-  const handleBrowserLogin = async () => {
+  const handleBrowserLogin = useCallback(async () => {
     try {
       setStatus('working');
       setMessage(provider === 'apple' ? 'Opening Continue with Apple…' : provider === 'google' ? 'Opening your Google account chooser…' : 'Opening your Microsoft account chooser…');
       await setPersistence(auth, browserLocalPersistence);
-      const result = await signInWithPopup(auth, provider === 'apple' ? appleProvider : provider === 'google' ? googleProvider : microsoftProvider);
-      const tokens = extractDesktopProviderPayload(result, provider);
-      const returnUrl = buildAppReturnUrl(provider, portal, tokens);
-      setStatus('returning');
-      setMessage(`Sign-in complete. Returning you to ${APP_BRAND_NAME}...`);
-      window.location.replace(returnUrl);
+      window.sessionStorage.setItem('edurevDesktopAuthProvider', provider);
+      window.sessionStorage.setItem('edurevDesktopAuthPortal', portal);
+      await signInWithRedirect(auth, provider === 'apple' ? appleProvider : provider === 'google' ? googleProvider : microsoftProvider);
     } catch (error: any) {
       console.error('Desktop browser auth failed:', error);
       setStatus('error');
       setMessage(error?.message || 'Sign-in could not be completed. Please close this page and try again.');
     }
-  };
+  }, [portal, provider]);
+
+  useEffect(() => {
+    let active = true;
+
+    const finishRedirect = async () => {
+      try {
+        await setPersistence(auth, browserLocalPersistence);
+        const result = await getRedirectResult(auth);
+        if (!active || !result?.user) return;
+
+        const storedProvider = readProvider(window.sessionStorage.getItem('edurevDesktopAuthProvider'));
+        const storedPortal = readPortal(window.sessionStorage.getItem('edurevDesktopAuthPortal'));
+        const tokens = extractDesktopProviderPayload(result, storedProvider);
+        const returnUrl = buildAppReturnUrl(storedProvider, storedPortal, tokens);
+        window.sessionStorage.removeItem('edurevDesktopAuthProvider');
+        window.sessionStorage.removeItem('edurevDesktopAuthPortal');
+        setStatus('returning');
+        setMessage(`Sign-in complete. Returning you to ${APP_BRAND_NAME}...`);
+        window.location.replace(returnUrl);
+      } catch (error: any) {
+        if (!active || error?.code === 'auth/no-auth-event') return;
+        console.error('Desktop browser redirect completion failed:', error);
+        setStatus('error');
+        setMessage(error?.message || 'Sign-in could not be completed. Please close this page and try again.');
+      }
+    };
+
+    finishRedirect();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!autoStart || autoStartedRef.current) return;
+    if (window.sessionStorage.getItem('edurevDesktopAuthProvider')) return;
+
+    autoStartedRef.current = true;
+    const timer = window.setTimeout(() => {
+      handleBrowserLogin();
+    }, 150);
+
+    return () => window.clearTimeout(timer);
+  }, [autoStart, handleBrowserLogin]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.08),_transparent_32%),linear-gradient(180deg,_#f8fafc_0%,_#f4f7fb_100%)] px-6 py-12 font-sans">

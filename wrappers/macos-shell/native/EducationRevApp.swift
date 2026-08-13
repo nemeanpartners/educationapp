@@ -4,7 +4,7 @@ import WebKit
 private let appName = "EducationRev"
 private let appURL = URL(string: "https://www.educationrevolution.qld.one/auth?shell=macos")!
 
-final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUIDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
     private var window: NSWindow?
     private var webView: WKWebView?
     private var loadingView: NSView?
@@ -89,6 +89,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
             try {
               window.localStorage.setItem('edurev-desktop-shell', '1');
               window.localStorage.setItem('edurev-wrapper-origin', 'native-macos');
+              window.eduRevShell = Object.assign({}, window.eduRevShell || {}, {
+                isDesktopShell: true,
+                openExternalAuth: function(url) {
+                  try {
+                    window.webkit.messageHandlers.eduRevShell.postMessage({
+                      type: 'openExternalAuth',
+                      url: String(url || '')
+                    });
+                  } catch (error) {
+                    window.open(url, '_blank', 'noopener,noreferrer');
+                  }
+                }
+              });
             } catch (error) {}
             try {
               if ('serviceWorker' in navigator) {
@@ -104,6 +117,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
             forMainFrameOnly: true
         )
         configuration.userContentController.addUserScript(startupScript)
+        configuration.userContentController.add(self, name: "eduRevShell")
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = self
@@ -203,6 +217,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         }
 
         NSWorkspace.shared.open(url)
+    }
+
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        guard
+            message.name == "eduRevShell",
+            let body = message.body as? [String: Any],
+            let type = body["type"] as? String,
+            type == "openExternalAuth",
+            let urlString = body["url"] as? String,
+            let url = URL(string: urlString),
+            shouldOpenExternally(url)
+        else {
+            return
+        }
+
+        openExternalURL(url)
     }
 
     private func shouldOpenExternally(_ url: URL) -> Bool {
