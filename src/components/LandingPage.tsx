@@ -9,12 +9,14 @@ export default function LandingPage() {
     if (!root) return;
 
     // Scroll Observer for watch class elements
-    const watchEls = Array.from(root.querySelectorAll('.watch'));
+    const watchEls = Array.from(root.querySelectorAll('.watch')).filter(
+      (el): el is HTMLElement => el instanceof HTMLElement
+    );
     const obs = new IntersectionObserver(
       (entries) => {
         entries.forEach((e) => {
           if (e.isIntersecting) {
-            const target = e.target;
+            const target = e.target as HTMLElement;
             setTimeout(() => {
               target.classList.add('show');
               target.classList.add('in');
