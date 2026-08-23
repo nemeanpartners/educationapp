@@ -70,7 +70,7 @@ function buildAppReturnUrl(provider: SupportedProvider, portal: StudentPortalTyp
 
 export function DesktopBrowserAuthPage() {
   const [status, setStatus] = useState<'ready' | 'working' | 'returning' | 'error'>('ready');
-  const [message, setMessage] = useState('Choose continue below to sign in with your saved browser account list.');
+  const [message, setMessage] = useState('Choose continue below to sign in with your saved account list.');
   const [redirectChecked, setRedirectChecked] = useState(false);
   const autoStartedRef = useRef(false);
 
@@ -206,7 +206,7 @@ export function DesktopBrowserAuthPage() {
           {provider === 'apple' ? 'Continue with Apple' : provider === 'google' ? 'Continue with Google' : 'Continue with Microsoft'}
         </h1>
         <p className="mt-4 text-lg font-medium leading-8 text-zinc-500">
-          This secure sign-in runs in your default browser so you can use your saved accounts, then returns you to {APP_BRAND_NAME} automatically.
+          This secure sign-in runs in a managed macOS authentication session so you can use your saved accounts, then returns you to {APP_BRAND_NAME} automatically.
         </p>
 
         <div className="mt-8 rounded-[28px] border border-zinc-200 bg-zinc-50/80 p-6">

@@ -10,8 +10,8 @@ BUILD_DIR="$ROOT_DIR/dist/native-mas-build-$(date +%Y%m%d%H%M%S)"
 APP_PATH="$BUILD_DIR/EducationRev.app"
 CLEAN_APP_PATH="$BUILD_DIR/clean/EducationRev.app"
 DIST_APP_PATH="$DIST_DIR/EducationRev.app"
-PKG_PATH="$DIST_DIR/EducationRev-1.1.1-universal.pkg"
-UNSIGNED_PKG_PATH="$BUILD_DIR/EducationRev-1.1.1-universal-unsigned.pkg"
+PKG_PATH="$DIST_DIR/EducationRev-1.1.2-universal.pkg"
+UNSIGNED_PKG_PATH="$BUILD_DIR/EducationRev-1.1.2-universal-unsigned.pkg"
 PAYLOAD_STAGE="$BUILD_DIR/product-payload"
 APP_IDENTITY="Apple Distribution: Nemean Partners Pty Ltd. (7ZU4NQ9RVT)"
 INSTALLER_IDENTITY="3rd Party Mac Developer Installer: Nemean Partners Pty Ltd. (7ZU4NQ9RVT)"
@@ -36,6 +36,7 @@ xcrun swiftc \
   -target x86_64-apple-macos12.0 \
   -O \
   -framework AppKit \
+  -framework AuthenticationServices \
   -framework WebKit \
   "$NATIVE_DIR/EducationRevApp.swift" \
   -o "$BUILD_DIR/EducationRev-x86_64"
@@ -44,6 +45,7 @@ xcrun swiftc \
   -target arm64-apple-macos12.0 \
   -O \
   -framework AppKit \
+  -framework AuthenticationServices \
   -framework WebKit \
   "$NATIVE_DIR/EducationRevApp.swift" \
   -o "$BUILD_DIR/EducationRev-arm64"

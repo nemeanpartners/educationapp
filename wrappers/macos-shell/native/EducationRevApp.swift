@@ -1,15 +1,17 @@
 import AppKit
+import AuthenticationServices
 import WebKit
 
 private let appName = "EducationRev"
 private let appURL = URL(string: "https://www.educationrevolution.qld.one/auth?shell=macos")!
 
-final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
+final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler, ASWebAuthenticationPresentationContextProviding {
     private var window: NSWindow?
     private var webView: WKWebView?
     private var loadingView: NSView?
     private var externalBackButton: NSButton?
     private var lastEducationRevURL: URL?
+    private var currentAuthSession: ASWebAuthenticationSession?
     private var retryTimer: Timer?
     private var renderCheckTimer: Timer?
     private var blankRenderRetryCount = 0
@@ -27,6 +29,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        currentAuthSession?.cancel()
+        currentAuthSession = nil
         NSAppleEventManager.shared().removeEventHandler(
             forEventClass: AEEventClass(kInternetEventClass),
             andEventID: AEEventID(kAEGetURL)
@@ -226,22 +230,46 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
             let type = body["type"] as? String,
             type == "openExternalAuth",
             let urlString = body["url"] as? String,
-            let url = URL(string: urlString),
-            shouldOpenExternally(url)
+            let url = URL(string: urlString)
         else {
             return
         }
 
-        openExternalURL(url)
+        if isDesktopAuthStartURL(url) {
+            startAuthenticationSession(url)
+        } else if shouldOpenExternally(url) {
+            openExternalURL(url)
+        }
+    }
+
+    private func isDesktopAuthStartURL(_ url: URL) -> Bool {
+        guard url.scheme == "https", url.host == appURL.host else {
+            return false
+        }
+
+        return url.path == "/auth/desktop-browser"
+    }
+
+    private func desktopAuthProviderName(from url: URL) -> String {
+        let provider = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+            .queryItems?
+            .first(where: { $0.name == "provider" })?
+            .value?
+            .lowercased()
+
+        switch provider {
+        case "microsoft":
+            return "Microsoft"
+        case "apple":
+            return "Apple"
+        default:
+            return "Google"
+        }
     }
 
     private func shouldOpenExternally(_ url: URL) -> Bool {
         guard url.scheme == "https" else {
             return false
-        }
-
-        if url.host == appURL.host {
-            return url.path == "/auth/desktop-browser"
         }
 
         let host = (url.host ?? "").lowercased()
@@ -253,7 +281,56 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
             return true
         }
 
+        if host == "login.microsoftonline.com" || host == "login.live.com" || host.hasSuffix(".microsoftonline.com") {
+            return true
+        }
+
         return false
+    }
+
+    private func startAuthenticationSession(_ url: URL) {
+        guard isDesktopAuthStartURL(url) else {
+            openExternalURL(url)
+            return
+        }
+
+        currentAuthSession?.cancel()
+        let providerName = desktopAuthProviderName(from: url)
+        showMainWindow()
+        showLoading(message: "Complete \(providerName) sign-in in the secure sign-in window.")
+
+        let session = ASWebAuthenticationSession(url: url, callbackURLScheme: "edurevolutionai") { [weak self] callbackURL, error in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                self.currentAuthSession = nil
+
+                if let callbackURL = callbackURL {
+                    self.openDeepLink(callbackURL)
+                    return
+                }
+
+                if let authError = error as? ASWebAuthenticationSessionError,
+                   authError.code == .canceledLogin {
+                    self.showError("\(providerName) sign-in was cancelled. Choose Continue with \(providerName) again to retry.")
+                    return
+                }
+
+                self.showError(error?.localizedDescription ?? "\(providerName) sign-in could not be completed.")
+            }
+        }
+
+        session.presentationContextProvider = self
+        session.prefersEphemeralWebBrowserSession = false
+        currentAuthSession = session
+
+        if !session.start() {
+            currentAuthSession = nil
+            showError("Could not open the secure \(providerName) sign-in session. Try again.")
+        }
+    }
+
+    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+        return window ?? ASPresentationAnchor()
     }
 
     private func openDeepLink(_ url: URL) {
@@ -493,6 +570,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
             return
         }
 
+        if isDesktopAuthStartURL(url) {
+            startAuthenticationSession(url)
+            decisionHandler(.cancel)
+            return
+        }
+
         if shouldOpenExternally(url) {
             openExternalURL(url)
             decisionHandler(.cancel)
@@ -517,6 +600,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
 
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
         if navigationAction.targetFrame == nil, let url = navigationAction.request.url {
+            if isDesktopAuthStartURL(url) {
+                startAuthenticationSession(url)
+                return nil
+            }
+
             if shouldOpenExternally(url) {
                 openExternalURL(url)
                 return nil

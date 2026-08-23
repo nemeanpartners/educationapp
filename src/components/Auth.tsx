@@ -9,6 +9,7 @@ import {
   signInAnonymously,
   signInWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
   updateProfile,
   type AuthProvider,
 } from 'firebase/auth';
@@ -230,6 +231,12 @@ export default function Auth() {
 
     try {
       if (usingDesktopBrowserFlow) {
+        if (provider === appleProvider) {
+          await setPersistence(auth, browserLocalPersistence);
+          await signInWithRedirect(auth, appleProvider);
+          return;
+        }
+
         const providerName = provider === appleProvider
           ? 'apple'
             : provider === microsoftProvider

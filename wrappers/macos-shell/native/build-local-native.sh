@@ -10,8 +10,8 @@ BUILD_DIR="$ROOT_DIR/dist/native-local-build-$(date +%Y%m%d%H%M%S)"
 APP_PATH="$BUILD_DIR/EducationRev.app"
 CLEAN_APP_PATH="$BUILD_DIR/clean/EducationRev.app"
 STAGE_ROOT="$BUILD_DIR/package-root"
-PKG_PATH="$DIST_DIR/EducationRev-1.1.1-universal-local.pkg"
-UNSIGNED_PKG_PATH="$BUILD_DIR/EducationRev-1.1.1-universal-local-unsigned.pkg"
+PKG_PATH="$DIST_DIR/EducationRev-1.1.2-universal-local.pkg"
+UNSIGNED_PKG_PATH="$BUILD_DIR/EducationRev-1.1.2-universal-local-unsigned.pkg"
 APP_IDENTITY="Developer ID Application: Nemean Partners Pty Ltd. (7ZU4NQ9RVT)"
 INSTALLER_IDENTITY="Developer ID Installer: Nemean Partners Pty Ltd. (7ZU4NQ9RVT)"
 
@@ -33,6 +33,7 @@ xcrun swiftc \
   -target x86_64-apple-macos12.0 \
   -O \
   -framework AppKit \
+  -framework AuthenticationServices \
   -framework WebKit \
   "$NATIVE_DIR/EducationRevApp.swift" \
   -o "$BUILD_DIR/EducationRev-x86_64"
@@ -41,6 +42,7 @@ xcrun swiftc \
   -target arm64-apple-macos12.0 \
   -O \
   -framework AppKit \
+  -framework AuthenticationServices \
   -framework WebKit \
   "$NATIVE_DIR/EducationRevApp.swift" \
   -o "$BUILD_DIR/EducationRev-arm64"
@@ -76,7 +78,7 @@ strip_metadata "$STAGE_ROOT/Applications/EducationRev.app"
 /usr/bin/pkgbuild \
   --root "$STAGE_ROOT" \
   --identifier "ai.edurevolution.wrapper.ios.local" \
-  --version "1.1.1" \
+  --version "1.1.2" \
   --install-location "/" \
   --sign "$INSTALLER_IDENTITY" \
   "$PKG_PATH"
