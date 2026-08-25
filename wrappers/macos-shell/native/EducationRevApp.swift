@@ -468,6 +468,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         showLoading(message: message)
     }
 
+    private func isCancelledNavigationError(_ error: Error) -> Bool {
+        let nsError = error as NSError
+        return nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled
+    }
+
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         if let url = webView.url {
             updateExternalBackButton(for: url)
@@ -476,11 +481,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        if isCancelledNavigationError(error) {
+            return
+        }
         renderCheckTimer?.invalidate()
         showError(error.localizedDescription)
     }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        if isCancelledNavigationError(error) {
+            return
+        }
         renderCheckTimer?.invalidate()
         showError(error.localizedDescription)
     }
