@@ -21,7 +21,7 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.1.1</string>
+	<string>1.1.2</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleSupportedPlatforms</key>
@@ -40,7 +40,7 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>1.1.1</string>
+	<string>1.1.2</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.education</string>
 	<key>LSMinimumSystemVersion</key>
@@ -52,6 +52,10 @@
 	</dict>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>EducationRev uses the camera only when you choose to join an in-app study meeting with video.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>EducationRev uses the microphone only when you choose to speak in an in-app study meeting.</string>
 	<key>NSSupportsAutomaticGraphicsSwitching</key>
 	<true/>
 </dict>

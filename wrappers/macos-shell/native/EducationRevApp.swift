@@ -1,15 +1,17 @@
 import AppKit
+import AuthenticationServices
 import WebKit
 
 private let appName = "EducationRev"
 private let appURL = URL(string: "https://www.educationrevolution.qld.one/auth?shell=macos")!
 
-final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUIDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler, ASWebAuthenticationPresentationContextProviding {
     private var window: NSWindow?
     private var webView: WKWebView?
     private var loadingView: NSView?
     private var externalBackButton: NSButton?
     private var lastEducationRevURL: URL?
+    private var currentAuthSession: ASWebAuthenticationSession?
     private var retryTimer: Timer?
     private var renderCheckTimer: Timer?
     private var blankRenderRetryCount = 0
@@ -27,6 +29,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        currentAuthSession?.cancel()
+        currentAuthSession = nil
         NSAppleEventManager.shared().removeEventHandler(
             forEventClass: AEEventClass(kInternetEventClass),
             andEventID: AEEventID(kAEGetURL)
@@ -65,7 +69,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     }
 
     @objc private func openInBrowser() {
-        NSWorkspace.shared.open(appURL)
+        openExternalURL(appURL)
     }
 
     @objc private func handleURLEvent(_ event: NSAppleEventDescriptor, withReplyEvent replyEvent: NSAppleEventDescriptor) {
@@ -89,12 +93,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
             try {
               window.localStorage.setItem('edurev-desktop-shell', '1');
               window.localStorage.setItem('edurev-wrapper-origin', 'native-macos');
+              window.eduRevShell = Object.assign({}, window.eduRevShell || {}, {
+                isDesktopShell: true,
+                openExternalAuth: function(url) {
+                  try {
+                    window.webkit.messageHandlers.eduRevShell.postMessage({
+                      type: 'openExternalAuth',
+                      url: String(url || '')
+                    });
+                  } catch (error) {
+                    window.open(url, '_blank', 'noopener,noreferrer');
+                  }
+                }
+              });
+            } catch (error) {}
+            try {
+              if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations()
+                  .then(function(registrations) {
+                    registrations.forEach(function(registration) { registration.unregister(); });
+                  })
+                  .catch(function() {});
+              }
             } catch (error) {}
             """,
             injectionTime: .atDocumentStart,
             forMainFrameOnly: true
         )
         configuration.userContentController.addUserScript(startupScript)
+        configuration.userContentController.add(self, name: "eduRevShell")
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = self
@@ -175,16 +202,74 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     }
 
     @objc private func openSupport() {
-        NSWorkspace.shared.open(URL(string: "https://www.educationrevolution.qld.one/support")!)
+        openExternalURL(URL(string: "https://www.educationrevolution.qld.one/support")!)
+    }
+
+    private func openExternalURL(_ url: URL) {
+        let chromeBundleId = "com.google.Chrome"
+        if
+            let chromeURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: chromeBundleId),
+            url.scheme == "http" || url.scheme == "https"
+        {
+            let configuration = NSWorkspace.OpenConfiguration()
+            NSWorkspace.shared.open([url], withApplicationAt: chromeURL, configuration: configuration) { _, error in
+                if error != nil {
+                    NSWorkspace.shared.open(url)
+                }
+            }
+            return
+        }
+
+        NSWorkspace.shared.open(url)
+    }
+
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        guard
+            message.name == "eduRevShell",
+            let body = message.body as? [String: Any],
+            let type = body["type"] as? String,
+            type == "openExternalAuth",
+            let urlString = body["url"] as? String,
+            let url = URL(string: urlString)
+        else {
+            return
+        }
+
+        if isDesktopAuthStartURL(url) {
+            startAuthenticationSession(url)
+        } else if shouldOpenExternally(url) {
+            openExternalURL(url)
+        }
+    }
+
+    private func isDesktopAuthStartURL(_ url: URL) -> Bool {
+        guard url.scheme == "https", url.host == appURL.host else {
+            return false
+        }
+
+        return url.path == "/auth/desktop-browser"
+    }
+
+    private func desktopAuthProviderName(from url: URL) -> String {
+        let provider = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+            .queryItems?
+            .first(where: { $0.name == "provider" })?
+            .value?
+            .lowercased()
+
+        switch provider {
+        case "microsoft":
+            return "Microsoft"
+        case "apple":
+            return "Apple"
+        default:
+            return "Google"
+        }
     }
 
     private func shouldOpenExternally(_ url: URL) -> Bool {
         guard url.scheme == "https" else {
             return false
-        }
-
-        if url.host == appURL.host {
-            return url.path == "/auth/desktop-browser"
         }
 
         let host = (url.host ?? "").lowercased()
@@ -196,12 +281,61 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
             return true
         }
 
+        if host == "login.microsoftonline.com" || host == "login.live.com" || host.hasSuffix(".microsoftonline.com") {
+            return true
+        }
+
         return false
+    }
+
+    private func startAuthenticationSession(_ url: URL) {
+        guard isDesktopAuthStartURL(url) else {
+            openExternalURL(url)
+            return
+        }
+
+        currentAuthSession?.cancel()
+        let providerName = desktopAuthProviderName(from: url)
+        showMainWindow()
+        showLoading(message: "Complete \(providerName) sign-in in the secure sign-in window.")
+
+        let session = ASWebAuthenticationSession(url: url, callbackURLScheme: "edurevolutionai") { [weak self] callbackURL, error in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                self.currentAuthSession = nil
+
+                if let callbackURL = callbackURL {
+                    self.openDeepLink(callbackURL)
+                    return
+                }
+
+                if let authError = error as? ASWebAuthenticationSessionError,
+                   authError.code == .canceledLogin {
+                    self.showError("\(providerName) sign-in was cancelled. Choose Continue with \(providerName) again to retry.")
+                    return
+                }
+
+                self.showError(error?.localizedDescription ?? "\(providerName) sign-in could not be completed.")
+            }
+        }
+
+        session.presentationContextProvider = self
+        session.prefersEphemeralWebBrowserSession = false
+        currentAuthSession = session
+
+        if !session.start() {
+            currentAuthSession = nil
+            showError("Could not open the secure \(providerName) sign-in session. Try again.")
+        }
+    }
+
+    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+        return window ?? ASPresentationAnchor()
     }
 
     private func openDeepLink(_ url: URL) {
         guard url.scheme == "edurevolutionai", url.host == "auth-complete" else {
-            NSWorkspace.shared.open(url)
+            openExternalURL(url)
             return
         }
 
@@ -334,6 +468,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         showLoading(message: message)
     }
 
+    private func isCancelledNavigationError(_ error: Error) -> Bool {
+        let nsError = error as NSError
+        return nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled
+    }
+
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         if let url = webView.url {
             updateExternalBackButton(for: url)
@@ -342,11 +481,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        if isCancelledNavigationError(error) {
+            return
+        }
         renderCheckTimer?.invalidate()
         showError(error.localizedDescription)
     }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        if isCancelledNavigationError(error) {
+            return
+        }
         renderCheckTimer?.invalidate()
         showError(error.localizedDescription)
     }
@@ -436,8 +581,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
             return
         }
 
+        if isDesktopAuthStartURL(url) {
+            startAuthenticationSession(url)
+            decisionHandler(.cancel)
+            return
+        }
+
         if shouldOpenExternally(url) {
-            NSWorkspace.shared.open(url)
+            openExternalURL(url)
             decisionHandler(.cancel)
             return
         }
@@ -454,14 +605,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
             return
         }
 
-        NSWorkspace.shared.open(url)
+        openExternalURL(url)
         decisionHandler(.cancel)
     }
 
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
         if navigationAction.targetFrame == nil, let url = navigationAction.request.url {
+            if isDesktopAuthStartURL(url) {
+                startAuthenticationSession(url)
+                return nil
+            }
+
             if shouldOpenExternally(url) {
-                NSWorkspace.shared.open(url)
+                openExternalURL(url)
                 return nil
             }
 
@@ -469,6 +625,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
             webView.load(URLRequest(url: url))
         }
         return nil
+    }
+
+    @available(macOS 12.0, *)
+    func webView(
+        _ webView: WKWebView,
+        requestMediaCapturePermissionFor origin: WKSecurityOrigin,
+        initiatedByFrame frame: WKFrameInfo,
+        type: WKMediaCaptureType,
+        decisionHandler: @escaping (WKPermissionDecision) -> Void
+    ) {
+        switch type {
+        case .camera, .microphone, .cameraAndMicrophone:
+            decisionHandler(.grant)
+        @unknown default:
+            decisionHandler(.prompt)
+        }
     }
 }
 

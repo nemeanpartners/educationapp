@@ -1,11 +1,14 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, OAuthProvider } from 'firebase/auth';
+import { browserLocalPersistence, getAuth, GoogleAuthProvider, OAuthProvider, setPersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import firebaseConfig from '../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
+setPersistence(auth, browserLocalPersistence).catch((error) => {
+  console.warn('EducationRev could not enable local auth persistence:', error);
+});
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId === 'default' ? undefined : firebaseConfig.firestoreDatabaseId);
 export const storage = getStorage(app);
 export const googleProvider = new GoogleAuthProvider();

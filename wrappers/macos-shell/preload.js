@@ -95,7 +95,7 @@ function ensureLoadingOverlay(mode = "loading", detail = "") {
         @keyframes edurev-spin { to { transform: rotate(360deg); } }
       </style>
       <main class="edurev-card">
-        <img src="https://edurevolution-ai-wyxvlktr5q-uw.a.run.app/edurevlogoimage.png" alt="">
+        <img src="https://www.educationrevolution.qld.one/edurevlogoimage.png" alt="">
         <h1></h1>
         <p class="edurev-message"></p>
         <p class="edurev-detail"></p>
@@ -179,6 +179,9 @@ contextBridge.exposeInMainWorld("eduRevShell", {
   },
   closeGooglePage() {
     ipcRenderer.send("google-page:close");
+  },
+  openExternalAuth(url) {
+    ipcRenderer.send("auth:open-external", url);
   },
   reloadApp() {
     ipcRenderer.send("app:reload");

@@ -14,6 +14,7 @@ dotenv.config();
 
 const app = express();
 const execFileAsync = promisify(execFile);
+const canonicalWebHost = "www.educationrevolution.qld.one";
 
 const runtimeFile = process.argv[1] || "";
 const __dirname = runtimeFile ? path.dirname(runtimeFile) : process.cwd();
@@ -52,17 +53,30 @@ const distPath = fs.existsSync(path.join(distCandidate, "index.html"))
 
 console.log(`Serving static files from: ${distPath}`);
 
-app.use((_req, res, next) => {
+app.use((req, res, next) => {
+  const host = String(req.headers.host || "").split(":")[0].toLowerCase();
+  if (host === "educationrevolution.qld.one") {
+    res.redirect(308, `https://${canonicalWebHost}${req.originalUrl || "/"}`);
+    return;
+  }
+
   res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
   next();
 });
 
 app.use(express.json({ limit: "25mb" }));
-app.use(express.static(distPath));
+app.use(express.static(distPath, {
+  etag: false,
+  lastModified: false,
+  setHeaders(res) {
+    // The desktop wrapper is a live web shell, so every launch must pick up the current Cloud Run build.
+    res.setHeader("Cache-Control", "no-store");
+  },
+}));
 
 const firebaseAuthHelperOrigin =
   process.env.FIREBASE_AUTH_HELPER_ORIGIN ||
-  "https://educationapp26.web.app";
+  "https://studio-7677496479-873b4.firebaseapp.com";
 
 app.get("/__/auth/*", async (req, res) => {
   try {
@@ -200,6 +214,40 @@ function decodeJwtPayload(token?: string | null) {
 
 function normalizePrivateKey(value: string) {
   return value.replace(/\\n/g, "\n").trim();
+}
+
+const DEFAULT_UNI_JITSI_APP_ID = "vpaas-magic-cookie-1cf26789542342928b6bf85544abb61a";
+const DEFAULT_UNI_JITSI_DOMAIN = "8x8.vc";
+const DEFAULT_UNI_JITSI_ROOM_PREFIX = "edurev";
+const DEFAULT_UNI_JITSI_JWT_ENDPOINT = "/api/jaas/token";
+
+function readEnvValue(...keys: string[]) {
+  for (const key of keys) {
+    const value = process.env[key]?.trim();
+    if (value) return value;
+  }
+  return "";
+}
+
+function getUniversityJitsiPublicConfig() {
+  const appId = readEnvValue("UNI_JITSI_APP_ID", "VITE_UNI_JITSI_APP_ID") || DEFAULT_UNI_JITSI_APP_ID;
+  const domain = readEnvValue("UNI_JITSI_DOMAIN", "VITE_UNI_JITSI_DOMAIN") || DEFAULT_UNI_JITSI_DOMAIN;
+  const externalApiUrl =
+    readEnvValue("UNI_JITSI_EXTERNAL_API_URL", "VITE_UNI_JITSI_EXTERNAL_API_URL") ||
+    (appId && domain ? `https://${domain}/${appId}/external_api.js` : "");
+  const roomPrefix = readEnvValue("UNI_JITSI_ROOM_PREFIX", "VITE_UNI_JITSI_ROOM_PREFIX") || DEFAULT_UNI_JITSI_ROOM_PREFIX;
+  const jwtEndpoint = readEnvValue("UNI_JITSI_JWT_ENDPOINT", "VITE_UNI_JITSI_JWT_ENDPOINT") || DEFAULT_UNI_JITSI_JWT_ENDPOINT;
+  const kid = readEnvValue("UNI_JITSI_KID");
+  const rawPrivateKey = readEnvValue("UNI_JITSI_PRIVATE_KEY");
+
+  return {
+    appId,
+    domain,
+    externalApiUrl,
+    roomPrefix,
+    jwtEndpoint,
+    provisioned: Boolean(appId && domain && externalApiUrl && roomPrefix && jwtEndpoint && kid && rawPrivateKey),
+  };
 }
 
 type VerifiedFirebaseUser = {
@@ -401,7 +449,10 @@ function normalizeReturnTo(value: string | null | undefined) {
     const parsed = new URL(value);
     const hostname = parsed.hostname.toLowerCase();
     const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1";
-    const isProductionHost = hostname === "edurevolution-ai-wyxvlktr5q-uw.a.run.app";
+    const isProductionHost =
+      hostname === "edurevolution-ai-wyxvlktr5q-uw.a.run.app" ||
+      hostname === "www.educationrevolution.qld.one" ||
+      hostname === "educationrevolution.qld.one";
     if ((parsed.protocol === "http:" && isLocalhost) || (parsed.protocol === "https:" && isProductionHost)) {
       return parsed.toString();
     }
@@ -749,9 +800,9 @@ async function uploadWorkbook(accessToken: string, fileName: string, buffer: Buf
 }
 
 function signJaasJwt(payload: Record<string, unknown>) {
-  const appId = process.env.UNI_JITSI_APP_ID?.trim() || process.env.VITE_UNI_JITSI_APP_ID?.trim();
-  const kid = process.env.UNI_JITSI_KID?.trim();
-  const rawPrivateKey = process.env.UNI_JITSI_PRIVATE_KEY?.trim();
+  const appId = readEnvValue("UNI_JITSI_APP_ID", "VITE_UNI_JITSI_APP_ID") || DEFAULT_UNI_JITSI_APP_ID;
+  const kid = readEnvValue("UNI_JITSI_KID");
+  const rawPrivateKey = readEnvValue("UNI_JITSI_PRIVATE_KEY");
 
   if (!appId || !kid || !rawPrivateKey) {
     throw new Error("University Jitsi is missing APP_ID, KID, or PRIVATE_KEY.");
@@ -1248,6 +1299,11 @@ app.post("/api/gemini", async (req, res) => {
   }
 });
 
+app.get("/api/university-meetings/config", (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.json(getUniversityJitsiPublicConfig());
+});
+
 app.post("/api/jaas/token", async (req, res) => {
   const authHeader = typeof req.headers.authorization === "string" ? req.headers.authorization : "";
   const bearer = authHeader.startsWith("Bearer ") ? authHeader.slice("Bearer ".length).trim() : "";
@@ -1274,7 +1330,7 @@ app.post("/api/jaas/token", async (req, res) => {
   }
 
   try {
-    const appId = process.env.UNI_JITSI_APP_ID?.trim() || process.env.VITE_UNI_JITSI_APP_ID?.trim();
+    const appId = readEnvValue("UNI_JITSI_APP_ID", "VITE_UNI_JITSI_APP_ID") || DEFAULT_UNI_JITSI_APP_ID;
     if (!appId) {
       throw new Error("University Jitsi APP_ID is missing.");
     }

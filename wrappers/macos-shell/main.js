@@ -1,5 +1,6 @@
 const path = require("path");
 const { app, BrowserWindow, shell, ipcMain, BrowserView, Menu } = require("electron");
+const { execFile } = require("child_process");
 
 const APP_ORIGIN = "https://www.educationrevolution.qld.one";
 const APP_URL = `${APP_ORIGIN}/auth?shell=macos`;
@@ -25,6 +26,27 @@ let isQuitting = false;
 let shellPageToken = 0;
 
 app.commandLine.appendSwitch("disable-http-cache");
+
+function openExternalUrl(url) {
+  if (process.platform === "darwin" && /^https?:\/\//i.test(url)) {
+    execFile("open", ["-b", "com.google.Chrome", url], (error) => {
+      if (error) shell.openExternal(url);
+    });
+    return;
+  }
+
+  shell.openExternal(url);
+}
+
+function openExternalAuthUrl(url) {
+  try {
+    const parsed = new URL(url);
+    const normalizedUrl = parsed.toString();
+    if (isDesktopBrowserAuthUrl(normalizedUrl) || isAllowedAuthPopupUrl(normalizedUrl)) {
+      openExternalUrl(normalizedUrl);
+    }
+  } catch {}
+}
 
 function escapeHtml(value) {
   return String(value)
@@ -218,6 +240,15 @@ function isAllowedAuthPopupUrl(url) {
   }
 }
 
+function isDesktopBrowserAuthUrl(url) {
+  try {
+    const parsed = new URL(url);
+    return parsed.origin === APP_ORIGIN && parsed.pathname === "/auth/desktop-browser";
+  } catch {
+    return false;
+  }
+}
+
 function focusMainWindow() {
   if (!mainWindow || mainWindow.isDestroyed()) {
     createWindow();
@@ -271,7 +302,7 @@ function buildApplicationMenu() {
         },
         {
           label: "Open Sign-In in Browser",
-          click: () => shell.openExternal(APP_URL),
+          click: () => openExternalUrl(APP_URL),
         },
         { type: "separator" },
         { role: "close" },
@@ -321,7 +352,7 @@ function buildApplicationMenu() {
       submenu: [
         {
           label: `${APP_NAME} Website`,
-          click: () => shell.openExternal(APP_ORIGIN),
+          click: () => openExternalUrl(APP_ORIGIN),
         },
       ],
     },
@@ -367,7 +398,7 @@ function ensureEmbeddedWordView() {
       return { action: "deny" };
     }
 
-    shell.openExternal(url);
+    openExternalUrl(url);
     return { action: "deny" };
   });
 
@@ -387,7 +418,7 @@ function ensureEmbeddedWordView() {
     }
 
     event.preventDefault();
-    shell.openExternal(url);
+    openExternalUrl(url);
   });
 
   return embeddedWordView;
@@ -530,7 +561,7 @@ function createOfficeWindow(targetUrl) {
       return { action: "deny" };
     }
 
-    shell.openExternal(url);
+    openExternalUrl(url);
     return { action: "deny" };
   });
 
@@ -550,7 +581,7 @@ function createOfficeWindow(targetUrl) {
     }
 
     event.preventDefault();
-    shell.openExternal(url);
+    openExternalUrl(url);
   });
 
   officeWindow.on("closed", () => {
@@ -750,6 +781,11 @@ function createWindow() {
   mainWindow = win;
 
   win.webContents.setWindowOpenHandler(({ url }) => {
+    if (isDesktopBrowserAuthUrl(url)) {
+      openExternalUrl(url);
+      return { action: "deny" };
+    }
+
     if (isMicrosoftOfficeInAppUrl(url)) {
       createOfficeWindow(url);
       return { action: "deny" };
@@ -760,16 +796,21 @@ function createWindow() {
     }
 
     if (isAllowedAuthPopupUrl(url)) {
-      shell.openExternal(url);
+      openExternalUrl(url);
       return { action: "deny" };
     }
 
-    shell.openExternal(url);
+    openExternalUrl(url);
     return { action: "deny" };
   });
 
   win.webContents.on("will-navigate", (event, url) => {
     if (isShellPageUrl(url)) {
+      return;
+    }
+    if (isDesktopBrowserAuthUrl(url)) {
+      event.preventDefault();
+      openExternalUrl(url);
       return;
     }
     if (isInternalWrapperUrl(url)) {
@@ -787,7 +828,7 @@ function createWindow() {
     }
     if (!isInternalWrapperUrl(url)) {
       event.preventDefault();
-      shell.openExternal(url);
+      openExternalUrl(url);
     }
   });
 
@@ -880,13 +921,32 @@ app.whenReady().then(() => {
   }
 
   app.on("web-contents-created", (_event, contents) => {
+    contents.setWindowOpenHandler(({ url }) => {
+      if (isDesktopBrowserAuthUrl(url) || isAllowedAuthPopupUrl(url)) {
+        openExternalUrl(url);
+        return { action: "deny" };
+      }
+
+      if (!isInternalWrapperUrl(url) || isMicrosoftOfficeInAppUrl(url) || isGoogleInAppUrl(url)) {
+        openExternalUrl(url);
+        return { action: "deny" };
+      }
+
+      return { action: "allow" };
+    });
+
     contents.on("will-navigate", (event, url) => {
       const isEmbeddedGoogleContents = embeddedGoogleView && contents.id === embeddedGoogleView.webContents.id;
+      if (isDesktopBrowserAuthUrl(url)) {
+        event.preventDefault();
+        openExternalUrl(url);
+        return;
+      }
       if (isInternalWrapperUrl(url) || isMicrosoftOfficeInAppUrl(url) || isGoogleInAppUrl(url) || isEmbeddedGoogleContents) {
         return;
       }
       event.preventDefault();
-      shell.openExternal(url);
+      openExternalUrl(url);
     });
   });
 
@@ -918,12 +978,17 @@ app.whenReady().then(() => {
     closeEmbeddedGoogleView();
   });
 
+  ipcMain.on("auth:open-external", (_event, url) => {
+    if (typeof url !== "string") return;
+    openExternalAuthUrl(url);
+  });
+
   ipcMain.on("app:reload", () => {
     loadMainApp();
   });
 
   ipcMain.on("app:open-browser", () => {
-    shell.openExternal(APP_URL);
+    openExternalUrl(APP_URL);
   });
 
   app.on("activate", () => {

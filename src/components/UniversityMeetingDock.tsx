@@ -8,6 +8,7 @@ import {
   getUniversityJitsiProvisioningMessage,
   getMeetingCountdown,
   isUniversityJitsiProvisioned,
+  loadUniversityMeetingConfig,
   readActiveUniversityMeeting,
   subscribeActiveUniversityMeeting,
   type ActiveUniversityMeeting,
@@ -18,9 +19,21 @@ export default function UniversityMeetingDock() {
   const location = useLocation();
   const [activeMeeting, setActiveMeeting] = useState<ActiveUniversityMeeting | null>(() => readActiveUniversityMeeting());
   const [expanded, setExpanded] = useState(false);
-  const jitsiProvisioned = isUniversityJitsiProvisioned();
+  const [jitsiProvisioned, setJitsiProvisioned] = useState(() => isUniversityJitsiProvisioned());
 
   useEffect(() => subscribeActiveUniversityMeeting(setActiveMeeting), []);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadUniversityMeetingConfig().then(() => {
+      if (!cancelled) {
+        setJitsiProvisioned(isUniversityJitsiProvisioned());
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const openMeetingHandler = (event: Event) => {

@@ -9,6 +9,7 @@ import {
   signInAnonymously,
   signInWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
   updateProfile,
   type AuthProvider,
 } from 'firebase/auth';
@@ -22,6 +23,10 @@ import { APP_BRAND_NAME } from '../lib/branding';
 import type { UserProfile } from '../types';
 
 type AuthMode = 'signin' | 'signup';
+const CANONICAL_AUTH_ORIGIN = 'https://www.educationrevolution.qld.one';
+type DesktopAuthShellBridge = {
+  openExternalAuth?: (url: string) => void;
+};
 
 function isMacDesktopWrapper() {
   if (typeof window === 'undefined') return false;
@@ -30,6 +35,35 @@ function isMacDesktopWrapper() {
   return /Electron/i.test(window.navigator.userAgent || '')
     || window.localStorage.getItem('edurev-desktop-shell') === '1'
     || window.localStorage.getItem('edurev-wrapper-origin') === 'native-macos';
+}
+
+function openDesktopAuthInBrowser(url: string) {
+  if (typeof window === 'undefined') return;
+
+  const shell = window.eduRevShell as (typeof window.eduRevShell & DesktopAuthShellBridge) | undefined;
+  if (shell?.openExternalAuth) {
+    shell.openExternalAuth(url);
+    return;
+  }
+
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+function createDesktopAuthState() {
+  if (typeof window === 'undefined') {
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  }
+
+  if (typeof window.crypto?.randomUUID === 'function') {
+    return window.crypto.randomUUID();
+  }
+
+  if (window.crypto?.getRandomValues) {
+    const values = window.crypto.getRandomValues(new Uint32Array(2));
+    return `${Date.now().toString(36)}-${Array.from(values).map((value) => value.toString(36)).join('')}`;
+  }
+
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 }
 
 function normalizeEmail(value: string) {
@@ -197,13 +231,19 @@ export default function Auth() {
 
     try {
       if (usingDesktopBrowserFlow) {
+        if (provider === appleProvider) {
+          await setPersistence(auth, browserLocalPersistence);
+          await signInWithRedirect(auth, appleProvider);
+          return;
+        }
+
         const providerName = provider === appleProvider
           ? 'apple'
-          : provider === microsoftProvider
-            ? 'microsoft'
-            : 'google';
-        const desktopAuthUrl = `${window.location.origin}/auth/desktop-browser?provider=${providerName}&portal=${selectedPortal}`;
-        window.open(desktopAuthUrl, '_blank', 'noopener,noreferrer');
+            : provider === microsoftProvider
+              ? 'microsoft'
+              : 'google';
+        const desktopAuthUrl = `${CANONICAL_AUTH_ORIGIN}/auth/desktop-browser?provider=${providerName}&portal=${selectedPortal}&auto=1&state=${encodeURIComponent(createDesktopAuthState())}`;
+        openDesktopAuthInBrowser(desktopAuthUrl);
         return;
       }
 

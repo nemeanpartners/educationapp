@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   GoogleAuthProvider,
   OAuthProvider,
   browserLocalPersistence,
+  getRedirectResult,
   setPersistence,
   signInWithCredential,
-  signInWithPopup,
+  signInWithRedirect,
   type UserCredential,
 } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
@@ -69,33 +70,133 @@ function buildAppReturnUrl(provider: SupportedProvider, portal: StudentPortalTyp
 
 export function DesktopBrowserAuthPage() {
   const [status, setStatus] = useState<'ready' | 'working' | 'returning' | 'error'>('ready');
-  const [message, setMessage] = useState('Choose continue below to sign in with your saved browser account list.');
+  const [message, setMessage] = useState('Choose continue below to sign in with your saved account list.');
+  const [redirectChecked, setRedirectChecked] = useState(false);
+  const autoStartedRef = useRef(false);
 
   const searchParams = useMemo(() => new URLSearchParams(window.location.search), []);
   const provider = readProvider(searchParams.get('provider'));
   const portal = readPortal(searchParams.get('portal'));
+  const autoStart = searchParams.get('auto') === '1';
+  const complete = searchParams.get('complete') === '1';
+  const authState = searchParams.get('state')
+    || window.sessionStorage.getItem('edurevDesktopAuthState')
+    || 'default';
+  const autoStartedKey = `edurevDesktopAuthAutoStarted:${authState}`;
+  const returnedKey = `edurevDesktopAuthReturned:${authState}`;
 
   useEffect(() => {
     setStoredStudentPortal(portal);
   }, [portal, provider]);
 
-  const handleBrowserLogin = async () => {
+  const handleBrowserLogin = useCallback(async () => {
     try {
       setStatus('working');
       setMessage(provider === 'apple' ? 'Opening Continue with Apple…' : provider === 'google' ? 'Opening your Google account chooser…' : 'Opening your Microsoft account chooser…');
       await setPersistence(auth, browserLocalPersistence);
-      const result = await signInWithPopup(auth, provider === 'apple' ? appleProvider : provider === 'google' ? googleProvider : microsoftProvider);
-      const tokens = extractDesktopProviderPayload(result, provider);
-      const returnUrl = buildAppReturnUrl(provider, portal, tokens);
-      setStatus('returning');
-      setMessage(`Sign-in complete. Returning you to ${APP_BRAND_NAME}...`);
-      window.location.replace(returnUrl);
+      window.sessionStorage.setItem('edurevDesktopAuthProvider', provider);
+      window.sessionStorage.setItem('edurevDesktopAuthPortal', portal);
+      window.sessionStorage.setItem('edurevDesktopAuthState', authState);
+      await signInWithRedirect(auth, provider === 'apple' ? appleProvider : provider === 'google' ? googleProvider : microsoftProvider);
     } catch (error: any) {
       console.error('Desktop browser auth failed:', error);
       setStatus('error');
       setMessage(error?.message || 'Sign-in could not be completed. Please close this page and try again.');
     }
-  };
+  }, [authState, portal, provider]);
+
+  useEffect(() => {
+    if (complete) {
+      setStatus('returning');
+      setMessage(`Sign-in was sent to ${APP_BRAND_NAME}. You can close this browser tab.`);
+      return;
+    }
+
+    let active = true;
+
+    const finishRedirect = async () => {
+      try {
+        await setPersistence(auth, browserLocalPersistence);
+        const result = await getRedirectResult(auth);
+        if (!active) return;
+        if (!result?.user) {
+          setRedirectChecked(true);
+          return;
+        }
+
+        const storedProvider = readProvider(window.sessionStorage.getItem('edurevDesktopAuthProvider'));
+        const storedPortal = readPortal(window.sessionStorage.getItem('edurevDesktopAuthPortal'));
+        const storedState = window.sessionStorage.getItem('edurevDesktopAuthState') || authState;
+        const tokens = extractDesktopProviderPayload(result, storedProvider);
+        const returnUrl = buildAppReturnUrl(storedProvider, storedPortal, tokens);
+        const storedReturnedKey = `edurevDesktopAuthReturned:${storedState}`;
+
+        if (window.sessionStorage.getItem(storedReturnedKey) === '1') {
+          setStatus('returning');
+          setMessage(`Sign-in was already sent to ${APP_BRAND_NAME}. You can close this browser tab.`);
+          return;
+        }
+
+        window.sessionStorage.setItem(storedReturnedKey, '1');
+        window.sessionStorage.removeItem('edurevDesktopAuthProvider');
+        window.sessionStorage.removeItem('edurevDesktopAuthPortal');
+        window.sessionStorage.removeItem('edurevDesktopAuthState');
+        window.history.replaceState(
+          {},
+          '',
+          `/auth/desktop-browser?complete=1&provider=${storedProvider}&portal=${storedPortal}&state=${encodeURIComponent(storedState)}`,
+        );
+        setStatus('returning');
+        setMessage(`Sign-in complete. Choose Open ${APP_BRAND_NAME} if your browser asks. This page will not try again.`);
+        window.setTimeout(() => {
+          window.location.href = returnUrl;
+        }, 100);
+        window.setTimeout(() => {
+          setMessage(`Sign-in was sent to ${APP_BRAND_NAME}. You can close this browser tab.`);
+          window.close();
+        }, 1400);
+      } catch (error: any) {
+        if (!active || error?.code === 'auth/no-auth-event') return;
+        console.error('Desktop browser redirect completion failed:', error);
+        setStatus('error');
+        setMessage(error?.message || 'Sign-in could not be completed. Please close this page and try again.');
+      } finally {
+        if (active) {
+          setRedirectChecked(true);
+        }
+      }
+    };
+
+    finishRedirect();
+
+    return () => {
+      active = false;
+    };
+  }, [authState, complete]);
+
+  useEffect(() => {
+    if (!redirectChecked) return;
+    if (status === 'error' || status === 'returning') return;
+    if (complete || !autoStart || autoStartedRef.current) return;
+    if (window.sessionStorage.getItem('edurevDesktopAuthProvider')) return;
+    if (window.sessionStorage.getItem(returnedKey) === '1') {
+      setStatus('returning');
+      setMessage(`Sign-in was already sent to ${APP_BRAND_NAME}. You can close this browser tab.`);
+      return;
+    }
+    if (window.sessionStorage.getItem(autoStartedKey) === '1') {
+      setMessage('The browser sign-in was already started. Finish the Google page already open, or click continue again if you cancelled it.');
+      return;
+    }
+
+    autoStartedRef.current = true;
+    window.sessionStorage.setItem(autoStartedKey, '1');
+    const timer = window.setTimeout(() => {
+      handleBrowserLogin();
+    }, 150);
+
+    return () => window.clearTimeout(timer);
+  }, [autoStart, autoStartedKey, complete, handleBrowserLogin, redirectChecked, returnedKey, status]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.08),_transparent_32%),linear-gradient(180deg,_#f8fafc_0%,_#f4f7fb_100%)] px-6 py-12 font-sans">
@@ -105,7 +206,7 @@ export function DesktopBrowserAuthPage() {
           {provider === 'apple' ? 'Continue with Apple' : provider === 'google' ? 'Continue with Google' : 'Continue with Microsoft'}
         </h1>
         <p className="mt-4 text-lg font-medium leading-8 text-zinc-500">
-          This secure sign-in runs in your default browser so you can use your saved accounts, then returns you to {APP_BRAND_NAME} automatically.
+          This secure sign-in runs in a managed macOS authentication session so you can use your saved accounts, then returns you to {APP_BRAND_NAME} automatically.
         </p>
 
         <div className="mt-8 rounded-[28px] border border-zinc-200 bg-zinc-50/80 p-6">
